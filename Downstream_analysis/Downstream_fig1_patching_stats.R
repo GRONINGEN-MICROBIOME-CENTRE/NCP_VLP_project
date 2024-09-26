@@ -21,6 +21,8 @@ library(lmerTest)
 library(patchwork)
 library(MuMIn)
 library(psych)
+library(ggpubr)
+library(rstatix)
 #######################################################################################################################################
 
 ## Set the working directory
@@ -133,9 +135,10 @@ meta_all_with_qc_curated <- meta_all_with_qc_curated %>%
 meta_all_with_qc_curated$nc_subject_group <- as.factor(meta_all_with_qc_curated$nc_subject_group)
 meta_all_with_qc_curated$cohort <- as.factor(meta_all_with_qc_curated$cohort)
 meta_all_with_qc_curated$ncvssample <- as.factor(meta_all_with_qc_curated$ncvssample)
+meta_all_with_qc_curated$ncvssample <- factor(meta_all_with_qc_curated$ncvssample, levels = c("SAMPLES", "NCs"))
 
 meta_working <- meta_all_with_qc_curated[meta_all_with_qc_curated$Sample_name %in% colnames(RPKM), ]
-
+meta_working$ncvssample <- factor(meta_working$ncvssample, levels = c("SAMPLES", "NCs"))
 
 host_prediction <- read.csv('../../VIR_DB/host_prediction_w_neg_der95_NCP/results/MERGED_Host_prediction_to_genus_m90_v2.csv')
 dim(host_prediction)  # 216679      5 
@@ -268,7 +271,8 @@ summarized_df2_frac_stats <- melt(summarized_df2_frac, id.vars = c("ncvssample",
 
 summarized_df2_frac_stats$value_log_trnsfrmd <- summarized_df2_frac_stats$value + (min(summarized_df2_frac_stats$value[summarized_df2_frac_stats$value > 0])/2)
 summarized_df2_frac_stats$value_log_trnsfrmd <- log(summarized_df2_frac_stats$value_log_trnsfrmd)
-  
+summarized_df2_frac_stats$ncvssample <- factor(summarized_df2_frac_stats$ncvssample, levels = c("SAMPLES", "NCs"))
+
 summary(lmer(value_log_trnsfrmd ~ ncvssample + (1|cohort/nc_subject_group), REML = F, data = summarized_df2_frac_stats[summarized_df2_frac_stats$cohort %in% c("liang", "shah") & summarized_df2_frac_stats$variable == "RNA", ]))
 summary(lmer(value_log_trnsfrmd ~ ncvssample + (1|cohort/nc_subject_group), REML = F, data = summarized_df2_frac_stats[summarized_df2_frac_stats$variable == "dsDNA", ]))
 summary(lmer(value_log_trnsfrmd ~ ncvssample + (1|cohort/nc_subject_group), REML = F, data = summarized_df2_frac_stats[summarized_df2_frac_stats$variable == "ssDNA", ]))
@@ -328,6 +332,8 @@ summarized_df3_frac <- merge(summarized_df3_frac, meta_working[, colnames(meta_w
 summarized_df3_frac$Sample_name <- NULL
 
 summarized_df3_frac_stats <- melt(summarized_df3_frac, id.vars = c("ncvssample", "cohort", "nc_subject_group"))
+
+summarized_df3_frac_stats$ncvssample <- factor(summarized_df3_frac_stats$ncvssample, levels = c("SAMPLES", "NCs"))
 
 summarized_df3_frac_stats$value_log_trnsfrmd <- summarized_df3_frac_stats$value + (min(summarized_df3_frac_stats$value[summarized_df3_frac_stats$value > 0])/2)
 summarized_df3_frac_stats$value_log_trnsfrmd <- log(summarized_df3_frac_stats$value_log_trnsfrmd)
@@ -444,6 +450,7 @@ write.table(summarized_df2_frac_melt, "/scratch/p309176/amg_paper/raw_data/NCP_s
 write.table(summarized_df3_frac_melt, "/scratch/p309176/amg_paper/raw_data/NCP_studies_vir/downstream_R/df_for_figure1d.tsv", sep='\t', row.names=F, col.names=T, quote=F)
 write.table(summarized_df4_frac_melt, "/scratch/p309176/amg_paper/raw_data/NCP_studies_vir/downstream_R/df_for_figures1e.tsv", sep='\t', row.names=F, col.names=T, quote=F)
 
+meta_working$ncvssample <- factor(meta_working$ncvssample, levels = c("NCs", "SAMPLES"))
 
 figure_1A <- ggplot(meta_working, aes(x=ncvssample, y=clean_reads_comb)) +
   geom_jitter(width = 0.3, aes(fill = timepoint_type), size=0.75, shape = 21, stroke = 0.1, color = "white") +
@@ -470,6 +477,27 @@ figure_1A <- ggplot(meta_working, aes(x=ncvssample, y=clean_reads_comb)) +
     strip.background = element_rect(fill = "transparent"),
     plot.tag = element_text(face="bold", size=6))
 
+stat.test1 <- meta_working[meta_working$cohort!="garmaeva",] %>%
+  group_by(cohort) %>%
+  t_test(clean_reads_comb ~ ncvssample) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance()
+
+stat.test1 <- stat.test1 %>% add_xy_position(x = "clean_reads_comb")
+stat.test1[4,] <- stat.test1[3,]
+stat.test1[4,"cohort"] <- "garmaeva"
+stat.test1$y.position <- log10(stat.test1$y.position)
+stat.test1[4,"y.position"] <- log10(max(meta_working[meta_working$cohort=="garmaeva",]$clean_reads_comb + 10000) )
+
+stat.test1$xmin <- 1
+stat.test1$xmax <- 2
+
+stat.test1$p <- c(0.684, 0.0383, 0.725, NA)
+stat.test1$p.adj <- c(0.725, 0.1149, 0.725, NA)
+stat.test1$p.signif <- c("ns", "ns", "ns", "NA")
+
+figure_1A <- figure_1A + stat_pvalue_manual(stat.test1, tip.length = 0.02, size=2.5, label = "p.signif")
+
 figure_1B <- ggplot(meta_working[!(meta_working$Sample_name %in% c("bctrl4633v", "bctrl4654v", "bctrl4676v", "bctrl4699v")), ], aes(x=ncvssample, y=richness)) +
   geom_jitter(width = 0.3, aes(fill = timepoint_type), size=0.75, shape = 21, stroke = 0.1, color = "white") +
   geom_boxplot(alpha=0, outliers = FALSE) +
@@ -494,6 +522,27 @@ figure_1B <- ggplot(meta_working[!(meta_working$Sample_name %in% c("bctrl4633v",
     strip.background = element_rect(fill = "transparent"),
     plot.tag = element_text(face="bold", size=6),
     legend.position = "bottom")
+
+stat.test2 <- meta_working[meta_working$cohort!="garmaeva",] %>%
+  group_by(cohort) %>%
+  t_test(richness ~ ncvssample) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance()
+
+stat.test2 <- stat.test2 %>% add_xy_position(x = "richness")
+stat.test2[4,] <- stat.test2[3,]
+stat.test2[4,"cohort"] <- "garmaeva"
+stat.test2$y.position <- log10(stat.test2$y.position)
+stat.test2[4,"y.position"] <- log10(max(meta_working[meta_working$cohort=="garmaeva",]$richness + 10000) )
+
+stat.test2$xmin <- 1
+stat.test2$xmax <- 2
+
+stat.test2$p <- c(0.00244, 0.54, 0.000603, NA)
+stat.test2$p.adj <- c(0.00366, 0.54, 0.001809, NA)
+stat.test2$p.signif <- c("**", "ns", "**", "NA")
+
+figure_1B <- figure_1B + stat_pvalue_manual(stat.test2, tip.length = 0.02, size=2.5, label = "p.signif")
 
 figure_1C <- ggplot(summarized_df2_frac_melt, aes(x = ncvssample, y = value, fill = variable)) +
   geom_bar(stat = "identity") +
@@ -579,6 +628,7 @@ combined_plot <- (figure_1A + figure_1B + plot_layout(nrow=1, guides = "collect"
 # Save the combined plot as a PDF
 ggsave("combined_figure.png", combined_plot, width = 22/2.54, height = 30/2.54)
 
+meta_working$ncvssample <- factor(meta_working$ncvssample, levels = c("SAMPLES", "NCs"))
 #######################################################################################################################################
 
 ## Stats calculation for part 1
@@ -1026,6 +1076,72 @@ table_for_plot_cor_combine_melt$pres_abun <- factor(table_for_plot_cor_combine_m
 
 write.table(table_for_plot_cor_combine, "/scratch/p309176/amg_paper/raw_data/NCP_studies_vir/downstream_R/df_for_figure2d.tsv", sep='\t', row.names=F, col.names=T, quote=F)
 
+# Permutation analysis
+
+
+# Initialize a list to store the results for each combination
+results <- list()
+
+# Define the unique values in cohort_nc
+cohort_values <- c("garmaeva", "liang", "maqsood", "shah")
+
+# Loop over each cohort_nc value
+for (cohort in cohort_values) {
+  
+  # Filter the dataframe for the current cohort
+  df_filtered <- table_for_plot_cor_combine_melt[table_for_plot_cor_combine_melt$cohort == cohort, ]
+  
+  # Apply the two conditions for pres_abun
+  conditions <- list(
+    "Condition_1" = df_filtered[df_filtered$pres_abun =="presence", ],
+    "Condition_2" = df_filtered[df_filtered$pres_abun == "abundance", ]
+  )
+  
+  # Loop over each condition
+  for (condition_name in names(conditions)) {
+    
+    # Get the filtered data for the current condition
+    df_condition <- conditions[[condition_name]]
+    
+    # Perform the initial Wilcoxon test to get the baseline p-value
+    baseline_result <- wilcox.test(value ~ same_diff, data = df_condition)
+    baseline_pvalue <- baseline_result$p.value
+    
+    # Set up the permutation test
+    set.seed(123)  # Set seed for reproducibility
+    n_permutations <- 10000
+    ppermute <- numeric(n_permutations)
+    
+    # Perform permutations
+    for (i in 1:n_permutations) {
+      # Shuffle the "value" column
+      shuffled_values <- sample(df_condition$value)
+      
+      # Create a new dataframe with the shuffled "value" column
+      df_shuffled <- df_condition
+      df_shuffled$value <- shuffled_values
+      
+      # Perform Wilcoxon test on the shuffled data
+      result <- wilcox.test(value ~ same_diff, data = df_shuffled)
+      
+      # Store the p-value in the ppermute vector
+      ppermute[i] <- result$p.value
+    }
+    
+    # Calculate the final p-value
+    final_pvalue <- sum(ppermute <= baseline_pvalue) / n_permutations
+    
+    # Save the results in the list
+    results[[paste(cohort, condition_name, sep = "_")]] <- list(
+      baseline_pvalue = baseline_pvalue,
+      final_pvalue = final_pvalue
+    )
+  }
+}
+
+# Output the results
+results
+
 table_for_plot_cor_combine_melt_subset <- table_for_plot_cor_combine[table_for_plot_cor_combine$cohort %in% c("garmaeva", "maqsood"), c("cohort", "Type", "same_cohort_NC_presence")]
 
 #CHECK FOR 0 VALUES FIRST!!!
@@ -1242,11 +1358,63 @@ result <- fisher.test(data)
 print(result)
 #######################################################################################################################################
 
+## Diversity association
+#######################################################################################################################################
+meta_working <- meta_working %>%
+  mutate(Timepoint_numeric = as.integer(gsub("M", "", Timepoint)),
+         Timepoint_numeric = ifelse(grepl("Y2-5", Timepoint), 42, Timepoint_numeric),
+         Timepoint_numeric = ifelse(Type == "Mother", 384, Timepoint_numeric))
+
+table_div_percshared_asoc <- merge(table_for_plot_cor_combine_melt[table_for_plot_cor_combine_melt$pres_abun == "presence" 
+                                                                   & table_for_plot_cor_combine_melt$same_diff == "same",],
+                                   meta_working[c("Sample_name", "diversity", "Type", "Timepoint_numeric", "nc_subject_group")], by="Sample_name", all.x=T)
+
+summary(lmer(value ~ diversity + (1|cohort/nc_subject_group), REML = F, data = table_div_percshared_asoc))
+summary(lmer(value ~ diversity + Type + (1|cohort/nc_subject_group), REML = F, data = table_div_percshared_asoc))
+summary(lmer(value ~ diversity + Type + Timepoint_numeric + (1|cohort/nc_subject_group), REML = F, data = table_div_percshared_asoc))
+#######################################################################################################################################
 
 ## Supplementary information
 #######################################################################################################################################
-pdf('figure_supp3.pdf', width = 14/2.54, height = 8/2.54)
-ggplot(meta_working, aes(x=ncvssample, y=contigs_1000)) +
+pdf('figure_supp2.pdf', width = 18/2.54, height = 10/2.54)
+ggplot() + 
+  geom_histogram(data = extended_tof, aes(POST_CHV_length, color="All", fill="All"), alpha = 0.2, bins=60) + 
+  geom_histogram(data = extended_tof[extended_tof$checkv_quality=="Not-determined",], aes(POST_CHV_length, color="Not-determined", fill="Not-determined"), alpha = 0.2, bins=60) +
+  geom_histogram(data = extended_tof[extended_tof$checkv_quality=="Low-quality",], aes(POST_CHV_length, color="Low-quality", fill="Low-quality"), alpha = 0.2, bins=60) +
+  geom_histogram(data = extended_tof[extended_tof$checkv_quality=="Medium-quality",], aes(POST_CHV_length, color="Medium-quality", fill="Medium-quality"), alpha = 0.2, bins=60) +
+  geom_histogram(data = extended_tof[extended_tof$checkv_quality=="High-quality",], aes(POST_CHV_length, color="High-quality", fill="High-quality"), alpha = 0.2, bins=60) +
+  geom_histogram(data = extended_tof[extended_tof$checkv_quality=="Complete",], aes(POST_CHV_length, color="Complete", fill="Complete"), alpha = 0.2, bins=60) +
+  labs(x="Virus contig length, bp", y="Log10 N virus contigs or fragments", fill="Genome Quality", color="Genome Quality") +
+  scale_color_manual(breaks=c("All", "Not-determined", "Low-quality", "Medium-quality", "High-quality", "Complete"), 
+                     values=c("#adadad", "#FDE725FF", "#5DC863FF", "#21908CFF", "#3B528BFF", "#440154FF")) + 
+  scale_fill_manual(breaks=c("All", "Not-determined", "Low-quality", "Medium-quality", "High-quality", "Complete"), 
+                    values=c("#DDDDDD", "#FDE725FF", "#5DC863FF", "#21908CFF", "#3B528BFF", "#440154FF")) +
+  scale_x_log10(breaks=c(100, 1000, 10000, 100000, 1000000), labels=c("100", "1,000", "10,000", "100,000", "1,000,000")) +
+  scale_y_log10() +
+  theme_bw() + 
+  theme(axis.title = element_text(size=12),
+        axis.text = element_text(size=10),
+        legend.title = element_text(size=10),
+        legend.position = "bottom",
+        legend.margin=margin(0,0,0,0),
+        legend.box.margin=margin(-10,-10,-3,-10)) +
+  guides(color = guide_legend(title.position = "top",label.position = "left", title.hjust = 0.5, nrow = 1)) + 
+  guides(fill = guide_legend(title.position = "top",label.position = "left", title.hjust = 0.5, nrow = 1))
+dev.off()
+
+extended_tof$virus_host_ratio <- (extended_tof$viral_genes + 0.1) / (extended_tof$host_genes + 0.1)
+
+pdf('figure_supp2a.pdf', width = 14/2.54, height = 8/2.54)
+ggplot(data=extended_tof, aes(x = virus_host_ratio)) +
+  geom_histogram(aes(y = after_stat(count)), bins = 30, fill = "red", alpha = 0.2) +
+  geom_density(color = "red", linewidth = 1) +
+  labs(x = "Log10 virus to host gene ratio", y = "N viruses") +
+  theme_minimal()
+dev.off()
+
+meta_working$ncvssample <- factor(meta_working$ncvssample, levels = c("NCs", "SAMPLES"))
+
+figure_3A_supp <- ggplot(meta_working, aes(x=ncvssample, y=contigs_1000)) +
   geom_jitter(width = 0.3, aes(fill = timepoint_type), size=0.75, shape = 21, stroke = 0.1, color = "white") +
   geom_boxplot(alpha=0, outliers = FALSE) +
   facet_grid(. ~ cohort, labeller = labeller(
@@ -1257,7 +1425,7 @@ ggplot(meta_working, aes(x=ncvssample, y=contigs_1000)) +
       "shah" = "Shah *et al.* <br>"))) +
   scale_fill_manual(values = c("#fcbf49", "#f77f00", "#d62828", "#4C6E7F")) +
   scale_y_log10() +
-  labs(y = "Number of assembled contigs \n longer than 1kb (log10)", fill = "Timepoints") +
+  labs(y = "Number of assembled contigs \n longer than 1kb (log10)", fill = "Timepoints", tag="a") +
   theme_bw() +
   theme(
     strip.text = ggtext::element_markdown(size=5),
@@ -1268,11 +1436,28 @@ ggplot(meta_working, aes(x=ncvssample, y=contigs_1000)) +
     legend.title = element_text(size = 8),
     legend.text = element_text(size = 6),
     legend.position = "bottom",
+    plot.tag = element_text(face="bold", size=6),
     strip.background = element_rect(fill = "transparent"))
-dev.off()
 
-pdf('figure_supp4.pdf', width = 14/2.54, height = 8/2.54)
-ggplot(meta_working, aes(x=ncvssample, y=total_viruses_discovered)) +
+stat.test3a <- meta_working[meta_working$cohort!="garmaeva",] %>%
+  group_by(cohort) %>%
+  t_test(contigs_1000 ~ ncvssample) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance()
+
+stat.test3a <- stat.test3a %>% add_xy_position(x = "contigs_1000")
+stat.test3a[4,] <- stat.test3a[3,]
+stat.test3a[4,"cohort"] <- "garmaeva"
+stat.test3a$y.position <- log10(stat.test3a$y.position)
+stat.test3a[4,"y.position"] <- log10(max(meta_working[meta_working$cohort=="garmaeva",]$contigs_1000 + 50000) )
+
+stat.test3a$xmin <- 1
+stat.test3a$xmax <- 2
+
+stat.test3a$p.signif <- c("ns", "ns", "ns", "NA")
+figure_3A_supp <- figure_3A_supp + stat_pvalue_manual(stat.test3a, tip.length = 0.02, size=2.5, label = "p.signif")
+
+figure_3B_supp <- ggplot(meta_working, aes(x=ncvssample, y=total_viruses_discovered)) +
   geom_jitter(width = 0.3, aes(fill = timepoint_type), size=0.75, shape = 21, stroke = 0.1, color = "white") +
   geom_boxplot(alpha=0, outliers = FALSE) +
   facet_grid(. ~ cohort, labeller = labeller(
@@ -1283,7 +1468,7 @@ ggplot(meta_working, aes(x=ncvssample, y=total_viruses_discovered)) +
       "shah" = "Shah *et al.* <br>"))) +
   scale_fill_manual(values = c("#fcbf49", "#f77f00", "#d62828", "#4C6E7F")) +
   scale_y_log10() +
-  labs(y = "Number of the discovered putative \n viral sequences (log10)", fill = "Timepoints") +
+  labs(y = "Number of the discovered putative \n viral sequences (log10)", fill = "Timepoints", tag="b") +
   theme_bw() +
   theme(
     strip.text = ggtext::element_markdown(size=5),
@@ -1294,11 +1479,29 @@ ggplot(meta_working, aes(x=ncvssample, y=total_viruses_discovered)) +
     legend.title = element_text(size = 8),
     legend.text = element_text(size = 6),
     legend.position = "bottom",
+    plot.tag = element_text(face="bold", size=6),
     strip.background = element_rect(fill = "transparent"))
-dev.off()
 
-pdf('figure_supp5.pdf', width = 14/2.54, height = 8/2.54)
-ggplot(meta_working, aes(x=ncvssample, y=CHM_LU_richness_discovered_ratio)) +
+stat.test3b <- meta_working[meta_working$cohort!="garmaeva",] %>%
+  group_by(cohort) %>%
+  t_test(total_viruses_discovered ~ ncvssample) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance()
+
+stat.test3b <- stat.test3b %>% add_xy_position(x = "total_viruses_discovered")
+stat.test3b[4,] <- stat.test3b[3,]
+stat.test3b[4,"cohort"] <- "garmaeva"
+stat.test3b$y.position <- log10(stat.test3b$y.position)
+stat.test3b[4,"y.position"] <- log10(max(meta_working[meta_working$cohort=="garmaeva",]$total_viruses_discovered + 20000) )
+
+stat.test3b$xmin <- 1
+stat.test3b$xmax <- 2
+
+stat.test3b$p.signif <- c("***", "ns", "ns", "NA")
+figure_3B_supp <- figure_3B_supp + stat_pvalue_manual(stat.test3b, tip.length = 0.02, size=2.5, label = "p.signif")
+
+
+figure_3C_supp <- ggplot(meta_working, aes(x=ncvssample, y=CHM_LU_richness_discovered_ratio)) +
   geom_jitter(width = 0.3, aes(fill = timepoint_type), size=0.75, shape = 21, stroke = 0.1, color = "white") +
   geom_boxplot(alpha=0, outliers = FALSE) +
   facet_grid(. ~ cohort, labeller = labeller(
@@ -1308,7 +1511,7 @@ ggplot(meta_working, aes(x=ncvssample, y=CHM_LU_richness_discovered_ratio)) +
       "maqsood" = "Maqsood *et al.* <br>",
       "shah" = "Shah *et al.* <br>"))) +
   scale_fill_manual(values = c("#fcbf49", "#f77f00", "#d62828", "#4C6E7F")) +
-  labs(y = "Richness ratio of the discovered vOTUs \n with >=50% completeness to all discovered vOTUs", fill = "Timepoints") +
+  labs(y = "Richness ratio of the discovered vOTUs \n with at least 50% completeness to all discovered vOTUs", fill = "Timepoints", tag="c") +
   theme_bw() +
   theme(
     strip.text = ggtext::element_markdown(size=5),
@@ -1319,11 +1522,28 @@ ggplot(meta_working, aes(x=ncvssample, y=CHM_LU_richness_discovered_ratio)) +
     legend.title = element_text(size = 8),
     legend.text = element_text(size = 6),
     legend.position = "bottom",
+    plot.tag = element_text(face="bold", size=6),
     strip.background = element_rect(fill = "transparent"))
-dev.off()
 
-pdf('figure_supp6.pdf', width = 14/2.54, height = 8/2.54)
-ggplot(meta_working, aes(x=ncvssample, y=diversity)) +
+stat.test3c <- meta_working[meta_working$cohort!="garmaeva",] %>%
+  group_by(cohort) %>%
+  t_test(CHM_LU_richness_discovered_ratio ~ ncvssample) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance()
+
+stat.test3c <- stat.test3c %>% add_xy_position(x = "CHM_LU_richness_discovered_ratio")
+stat.test3c[4,] <- stat.test3c[3,]
+stat.test3c[4,"cohort"] <- "garmaeva"
+stat.test3c[4,"y.position"] <- max(meta_working[meta_working$cohort=="garmaeva",]$CHM_LU_richness_discovered_ratio + 0.2)
+
+stat.test3c$xmin <- 1
+stat.test3c$xmax <- 2
+
+stat.test3c$p.signif <- c("ns", "ns", "ns", "NA")
+figure_3C_supp <- figure_3C_supp + stat_pvalue_manual(stat.test3c, tip.length = 0.02, size=2.5, label = "p.signif")
+
+
+figure_3D_supp <- ggplot(meta_working, aes(x=ncvssample, y=diversity)) +
   geom_jitter(width = 0.3, aes(fill = timepoint_type), size=0.75, shape = 21, stroke = 0.1, color = "white") +
   geom_boxplot(alpha=0, outliers = FALSE) +
   facet_grid(. ~ cohort, labeller = labeller(
@@ -1333,7 +1553,7 @@ ggplot(meta_working, aes(x=ncvssample, y=diversity)) +
       "maqsood" = "Maqsood *et al.* <br>",
       "shah" = "Shah *et al.* <br>"))) +
   scale_fill_manual(values = c("#fcbf49", "#f77f00", "#d62828", "#4C6E7F")) +
-  labs(y = "Shannon diversity", fill = "Timepoints") +
+  labs(y = "Shannon diversity", fill = "Timepoints", tag="d") +
   theme_bw() +
   theme(
     strip.text = ggtext::element_markdown(size=5),
@@ -1344,11 +1564,80 @@ ggplot(meta_working, aes(x=ncvssample, y=diversity)) +
     legend.title = element_text(size = 8),
     legend.text = element_text(size = 6),
     legend.position = "bottom",
+    plot.tag = element_text(face="bold", size=6),
     strip.background = element_rect(fill = "transparent"))
-dev.off()
 
-pdf('figure_supp8.pdf', width = 14/2.54, height = 8/2.54)
-ggplot(table_for_plot_cor_combine_melt_subset_log, aes(x = Type, y = same_cohort_NC_presence)) +
+stat.test3d <- meta_working[meta_working$cohort!="garmaeva",] %>%
+  group_by(cohort) %>%
+  t_test(diversity ~ ncvssample) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance()
+
+stat.test3d <- stat.test3d %>% add_xy_position(x = "diversity")
+stat.test3d[4,] <- stat.test3d[3,]
+stat.test3d[4,"cohort"] <- "garmaeva"
+stat.test3d[4,"y.position"] <- max(meta_working[meta_working$cohort=="garmaeva",]$diversity + 0.2)
+
+stat.test3d$xmin <- 1
+stat.test3d$xmax <- 2
+
+stat.test3d$p.signif <- c("*", "ns", "*", "NA")
+figure_3D_supp <- figure_3D_supp + stat_pvalue_manual(stat.test3d, tip.length = 0.02, size=2.5, label = "p.signif")
+
+figure_3_supp <- ((figure_3A_supp + figure_3B_supp) / (figure_3C_supp + figure_3D_supp)) + plot_layout(guides = 'collect') & theme(legend.position = "bottom")
+
+# Save the combined plot as a PDF
+ggsave("Supplementary_figure3.pdf", figure_3_supp, width = 22/2.54, height = 22/2.54)
+
+
+
+figure_4_supp <- ggplot(table_for_plot_cor_combine_melt, aes(x = same_diff, y = value)) +
+  geom_jitter(width = 0.3, fill = "#2E236C", size = 1.3, shape = 21, stroke = 0.1, color = "white") +
+  geom_boxplot(fill = "#C8ACD6", alpha=0.3, outliers = FALSE) +
+  facet_grid(cohort ~ pres_abun, scales = "free", labeller = labeller(
+    pres_abun = c(
+      "presence" = "% shared contigs (presence)",
+      "abundance" = "% shared contigs (abundance)"
+    ),
+    cohort = c(
+      "garmaeva" = "Samples Garmaeva *et al.* <br>",
+      "liang" = "Samples Liang *et al.* <br>",
+      "maqsood" = "Samples Maqsood *et al.* <br>",
+      "shah" = "Samples Shah *et al.* <br>"
+    )
+  )) +
+  theme_bw() +
+  theme(
+    strip.text = ggtext::element_markdown(size=5),
+    plot.title = element_text(size = 10),
+    axis.title.x = element_blank(),
+    axis.title.y = element_text(size = 8),
+    axis.text.x = element_text(size = 8), 
+    axis.text.y = element_text(size = 6),
+    strip.background = element_rect(fill = "transparent")
+  )
+
+stat.test4 <- table_for_plot_cor_combine_melt %>%
+  group_by(cohort, pres_abun) %>%
+  t_test(value ~ same_diff) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance()
+
+stat.test4 <- stat.test4 %>% 
+  add_xy_position(x = "same_diff", dodge = 0.8)
+
+stat.test4$xmin <- 1
+stat.test4$xmax <- 2
+
+stat.test4$p.signif <- c("****", "****", "ns", "ns", "ns", "ns", "****", "****")
+
+figure_4_supp <- figure_4_supp + 
+  stat_pvalue_manual(stat.test4, tip.length = 0.02, size=2.5, label = "p.signif")
+
+ggsave("Supplementary_figure4.pdf", figure_4_supp, width = 18/2.54, height = 18/2.54)
+
+
+figure_5_supp <- ggplot(table_for_plot_cor_combine_melt_subset_log, aes(x = Type, y = same_cohort_NC_presence)) +
   geom_jitter(width = 0.3, fill = "#2E236C", size = 1.3, shape = 21, stroke = 0.1, color = "white") +
   geom_boxplot(fill = "#C8ACD6", alpha=0.3, outlier.alpha = 0) +
   scale_y_log10() +
@@ -1369,10 +1658,23 @@ ggplot(table_for_plot_cor_combine_melt_subset_log, aes(x = Type, y = same_cohort
     axis.text.y = element_text(size = 6),
     strip.background = element_rect(fill = "transparent")
   )
-dev.off()
 
-pdf('figure_supp7?.pdf', width = 14/2.54, height = 8/2.54)
-dev.off()
+stat.test5 <- table_for_plot_cor_combine_melt_subset_log %>%
+  group_by(cohort) %>%
+  t_test(same_cohort_NC_presence ~ Type) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance()
+
+stat.test5 <- stat.test5 %>% add_xy_position(x = "same_cohort_NC_presence")
+stat.test5$y.position <- log10(stat.test5$y.position)
+
+stat.test5$xmin <- 1
+stat.test5$xmax <- 2
+
+stat.test5$p.signif <- c("****", "****")
+figure_5_supp <- figure_5_supp + stat_pvalue_manual(stat.test5, tip.length = 0.02, size=2.5, label = "p.signif")
+ggsave("Supplementary_figure5.pdf", figure_5_supp, width = 14/2.54, height = 10/2.54)
+
 
 #######################################################################################################################################
 
