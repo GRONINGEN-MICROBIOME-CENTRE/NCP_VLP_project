@@ -34,20 +34,7 @@ df_for_figure2d <- as.data.frame(read_tsv('df_for_figure2d.tsv'))
 df_for_figure2e <- as.data.frame(read_tsv('df_for_figure2e.tsv'))
 df_for_figure2e$Timepoint <- factor(df_for_figure2e$Timepoint, levels = c("M0", "M1", "M2", "M3", "M4", "M6", "M12"))
 df_for_figure2e <- df_for_figure2e[df_for_figure2e$Dataset == "RPKM_count", ]
-
-df_for_figure2d <- df_for_figure2d %>%
-  mutate(number_NCs = ifelse(cohort %in% c("maqsood", "shah"), 8, NA),
-         number_NCs = ifelse(cohort %in% c("garmaeva"), 1, number_NCs),
-         number_NCs = ifelse(cohort %in% c("liang"), 20, number_NCs))
-
-ggplot(df_for_figure2d, aes(x=number_NCs, y=same_cohort_NC_presence)) +
-  geom_point() +  # Adjusted point size and added transparency
-  geom_smooth() # Use linewidth instead of size
-  
-summary(lmer(same_cohort_NC_presence ~ number_NCs + (1|cohort/nc_subject_group), REML = F, data = df_for_figure2d))
-summary(lmer(same_cohort_NC_presence ~ number_NCs + Type + Timepoint + (1|nc_subject_group), REML = F, data = df_for_figure2d))
 df_for_figure2d$Type <- factor(df_for_figure2d$Type, levels = c("same", "different"))
-df_for_figure2d$Timepoint_numeric
 #######################################################################################################################################
 
 ## Set the working directory
@@ -59,6 +46,7 @@ setwd("C:\\Users\\Natal\\Documents\\UMCG\\amg_paper\\plots\\neg_ctrl_sharing")
 #######################################################################################################################################
 figure_2A <- readRDS(file="burkholderia.rds")
 figure_2A$labels$tag <- "a"
+figure_2A
 
 figure_2B <- readRDS(file="phix.rds")
 figure_2B$labels$tag <- "b"
@@ -199,6 +187,6 @@ figure_2F
 combined_plot2 <- (figure_2A + figure_2B + figure_2C + plot_layout(nrow=1, guides = "collect")) / (figure_2D + figure_2E + figure_2F) +
   plot_layout(heights = c(2.2, 1))# Save the combined plot as a PDF
 
-ggsave("combined_figure2.png", combined_plot2, width = 45/2.54, height = 30/2.54)
+ggsave("combined_figure2.png", combined_plot2, width = 21/2.54, height = 29.7/2.54)
 #######################################################################################################################################
 
