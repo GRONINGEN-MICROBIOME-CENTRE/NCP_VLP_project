@@ -354,7 +354,6 @@ p.adjust(c(0.093, 0.413, 0.229289, 0.443, 0.507, 3.04e-06), method="BH")
 
 # Answering if prokaryotes dominating eukaryotes
 
-#an error occurs somwhere here
 summarized_df3_frac_stats <- summarized_df3_frac
 
 summarized_df3_frac_stats$Prokaryotes_log_trnsfrmd <- summarized_df3_frac_stats$Prokaryotes + (min(summarized_df3_frac_stats$Prokaryotes[summarized_df3_frac_stats$Prokaryotes > 0])/2)
@@ -363,11 +362,15 @@ summarized_df3_frac_stats$Eukaryotes_log_trnsfrmd <- summarized_df3_frac_stats$E
 summarized_df3_frac_stats$Prokaryotes_log_trnsfrmd <- log(summarized_df3_frac_stats$Prokaryotes_log_trnsfrmd)
 summarized_df3_frac_stats$Eukaryotes_log_trnsfrmd <- log(summarized_df3_frac_stats$Eukaryotes_log_trnsfrmd)
 
-summary(lmer(Prokaryotes_log_trnsfrmd ~ Eukaryotes_log_trnsfrmd + (1|cohort/nc_subject_group), REML = F, data = summarized_df3_frac_stats))
-summary(lmer(Prokaryotes_log_trnsfrmd ~ Eukaryotes_log_trnsfrmd + (1|nc_subject_group), REML = F, data = summarized_df3_frac_stats[summarized_df3_frac_stats$cohort == "liang", ]))
-summary(lmer(Prokaryotes_log_trnsfrmd ~ Eukaryotes_log_trnsfrmd + (1|nc_subject_group), REML = F, data = summarized_df3_frac_stats[summarized_df3_frac_stats$cohort == "maqsood", ]))
-summary(lmer(Prokaryotes_log_trnsfrmd ~ Eukaryotes_log_trnsfrmd + (1|nc_subject_group), REML = F, data = summarized_df3_frac_stats[summarized_df3_frac_stats$cohort == "shah", ]))
-p.adjust(c(2e-16, 2e-16, 1.41e-06))
+prok_vs_euk_combined <- summary(lmer(Prokaryotes_log_trnsfrmd ~ Eukaryotes_log_trnsfrmd + (1|cohort/nc_subject_group), REML = F, data = summarized_df3_frac_stats))
+prok_vs_euk_combined$coefficients
+prok_vs_euk_liang <- summary(lmer(Prokaryotes_log_trnsfrmd ~ Eukaryotes_log_trnsfrmd + (1|nc_subject_group), REML = F, data = summarized_df3_frac_stats[summarized_df3_frac_stats$cohort == "liang", ]))
+prok_vs_euk_liang$coefficients
+prok_vs_euk_maqsood <- summary(lmer(Prokaryotes_log_trnsfrmd ~ Eukaryotes_log_trnsfrmd + (1|nc_subject_group), REML = F, data = summarized_df3_frac_stats[summarized_df3_frac_stats$cohort == "maqsood", ]))
+prok_vs_euk_maqsood$coefficients
+prok_vs_euk_shah <- summary(lmer(Prokaryotes_log_trnsfrmd ~ Eukaryotes_log_trnsfrmd + (1|nc_subject_group), REML = F, data = summarized_df3_frac_stats[summarized_df3_frac_stats$cohort == "shah", ]))
+prok_vs_euk_shah$coefficients
+p.adjust(c(5.363049e-31, 1.41e-06, 7.386918e-112))
 
 summarized_df3_frac <- summarized_df3_frac %>%
   group_by(ncvssample, cohort) %>%
