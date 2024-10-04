@@ -16,6 +16,7 @@ This repository contains scripts and instructions for the combined analysis of v
     - [RPKM Table with 95% Breadth of Coverage](#a-rpkm-table-with-95-breadth-of-coverage)
     - [RPKM Table with 99% Breadth of Coverage](#b-rpkm-table-with-99-breadth-of-coverage)
     - [Final Decontaminated RPKM Table](#c-final-decontaminated-rpkm-table)
+11. [Adding Cluster Infomation To eTOF](#11-cluster-information-to-etof)
 
 ## Step-by-Step Description
 
@@ -115,6 +116,13 @@ Generates the RPKM table with 99% breadth of coverage.
 - Sets values to 0 for contigs detected simultaneously in negative controls and samples (based on 99% breadth of coverage).
 - Creates the final decontaminated RPKM table (based on 95% breadth).
 - Generates an RPKM table decontaminated at the species level.
+
+### 11. Adding Cluster Infomation To eTOF
+
+**Script:**  
+- `dereplication_stat.R`
+
+To run the script load the R module and run through the Rscript with adding a path to the file with the viral clusters.
 
 ## Additional Notes
 
