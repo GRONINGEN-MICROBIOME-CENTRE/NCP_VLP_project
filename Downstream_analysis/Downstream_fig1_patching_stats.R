@@ -1412,7 +1412,7 @@ figure_2A_supp <- ggplot() +
   geom_histogram(data = filtered_extended_tof[filtered_extended_tof$checkv_quality=="Medium-quality",], aes(POST_CHV_length, color="Medium-quality", fill="Medium-quality"), alpha = 0.2, bins=60) +
   geom_histogram(data = filtered_extended_tof[filtered_extended_tof$checkv_quality=="High-quality",], aes(POST_CHV_length, color="High-quality", fill="High-quality"), alpha = 0.2, bins=60) +
   geom_histogram(data = filtered_extended_tof[filtered_extended_tof$checkv_quality=="Complete",], aes(POST_CHV_length, color="Complete", fill="Complete"), alpha = 0.2, bins=60) +
-  labs(x="Virus contig length, bp", y="log10(N virus contigs or fragments)", fill="Genome Quality", color="Genome Quality", tag="a") +
+  labs(x="Virus contig length, bp", y="log10(N virus contigs \n or fragments)", fill="Genome Quality", color="Genome Quality", tag="a") +
   scale_color_manual(breaks=c("All", "Not-determined", "Low-quality", "Medium-quality", "High-quality", "Complete"), 
                      values=c("#adadad", "#FDE725FF", "#5DC863FF", "#21908CFF", "#3B528BFF", "#440154FF")) + 
   scale_fill_manual(breaks=c("All", "Not-determined", "Low-quality", "Medium-quality", "High-quality", "Complete"), 
@@ -1424,14 +1424,14 @@ figure_2A_supp <- ggplot() +
         axis.title.y = element_text(size = 8),
         axis.text.x = element_text(size = 6),
         axis.text.y = element_text(size = 6),
-        legend.title = element_text(size=6),
+        legend.title = element_text(size=8),
         legend.text = element_text(size = 6),
         legend.position = "bottom",
         plot.tag = element_text(face="bold", size=6),
         legend.margin=margin(0,0,0,0),
         legend.box.margin=margin(-10,-10,-3,-10)) +
-  guides(color = guide_legend(title.position = "top",label.position = "left", title.hjust = 0.5, nrow = 1)) + 
-  guides(fill = guide_legend(title.position = "top",label.position = "left", title.hjust = 0.5, nrow = 1))
+  guides(color = guide_legend(title.position = "top",label.position = "left", title.hjust = 0.5, nrow = 1, keywidth = 1, keyheight = 1)) + 
+  guides(fill = guide_legend(title.position = "top",label.position = "left", title.hjust = 0.5, nrow = 1, keywidth = 1, keyheight = 1))
 
 filtered_extended_tof$virus_host_ratio <- (filtered_extended_tof$viral_genes) / (filtered_extended_tof$host_genes)
 
@@ -1451,14 +1451,14 @@ figure_2B_supp <- ggplot(data=filtered_extended_tof, aes(x = virus_host_ratio)) 
     plot.tag = element_text(face="bold", size=6),
     strip.background = element_rect(fill = "transparent"))
 
-figure_2_supp <- figure_2A_supp + figure_2B_supp
+figure_2_supp <- figure_2A_supp + figure_2B_supp + plot_layout(guides = 'collect') & theme(legend.position = "bottom")
 ggsave("Supplementary_figure2.pdf", figure_2_supp, width = 24/2.54, height = 10/2.54)
-ggsave("Supplementary_figure2.png", figure_2_supp, width = 24/2.54, height = 10/2.54)
+ggsave("Supplementary_figure2.png", figure_2_supp, width = 15.92/2.54, height = 6.63/2.54)
 
 meta_working$ncvssample <- factor(meta_working$ncvssample, levels = c("NCs", "SAMPLES"))
 
 figure_3A_supp <- ggplot(meta_working, aes(x=ncvssample, y=contigs_1000)) +
-  geom_jitter(width = 0.3, aes(fill = timepoint_type), size=1.5, shape = 21, stroke = 0.1, color = "white") +
+  geom_jitter(width = 0.3, aes(fill = timepoint_type), size=1, shape = 21, stroke = 0.1, color = "white") +
   geom_boxplot(alpha=0, outliers = FALSE) +
   facet_grid(. ~ cohort, labeller = labeller(
     cohort = c(
@@ -1471,11 +1471,11 @@ figure_3A_supp <- ggplot(meta_working, aes(x=ncvssample, y=contigs_1000)) +
   labs(y = "Number of assembled contigs \n longer than 1kb (log10)", fill = "Timepoints", tag="a") +
   theme_bw() +
   theme(
-    strip.text = ggtext::element_markdown(size=7),
+    strip.text = ggtext::element_markdown(size=5),
     axis.title.x = element_blank(),
     axis.title.y = element_text(size = 8),
-    axis.text.x = element_text(size = 6),
-    axis.text.y = element_text(size = 6),
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 5),
+    axis.text.y = element_text(size = 5),
     legend.title = element_text(size = 8),
     legend.text = element_text(size = 6),
     legend.position = "bottom",
@@ -1506,7 +1506,7 @@ stat.test3a$p.signif <- c("ns", "ns", "ns", "NA")
 figure_3A_supp <- figure_3A_supp + stat_pvalue_manual(stat.test3a, tip.length = 0.02, size=2.5, label = "p.signif")
 
 figure_3B_supp <- ggplot(meta_working, aes(x=ncvssample, y=total_viruses_discovered)) +
-  geom_jitter(width = 0.3, aes(fill = timepoint_type), size=1.5, shape = 21, stroke = 0.1, color = "white") +
+  geom_jitter(width = 0.3, aes(fill = timepoint_type), size=1, shape = 21, stroke = 0.1, color = "white") +
   geom_boxplot(alpha=0, outliers = FALSE) +
   facet_grid(. ~ cohort, labeller = labeller(
     cohort = c(
@@ -1519,11 +1519,11 @@ figure_3B_supp <- ggplot(meta_working, aes(x=ncvssample, y=total_viruses_discove
   labs(y = "Number of the discovered putative \n viral sequences (log10)", fill = "Timepoints", tag="b") +
   theme_bw() +
   theme(
-    strip.text = ggtext::element_markdown(size=7),
+    strip.text = ggtext::element_markdown(size=5),
     axis.title.x = element_blank(),
     axis.title.y = element_text(size = 8),
-    axis.text.x = element_text(size = 6),
-    axis.text.y = element_text(size = 6),
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 5),
+    axis.text.y = element_text(size = 5),
     legend.title = element_text(size = 8),
     legend.text = element_text(size = 6),
     legend.position = "bottom",
@@ -1555,7 +1555,7 @@ figure_3B_supp <- figure_3B_supp + stat_pvalue_manual(stat.test3b, tip.length = 
 
 
 figure_3C_supp <- ggplot(meta_working, aes(x=ncvssample, y=CHM_LU_richness_discovered_ratio)) +
-  geom_jitter(width = 0.3, aes(fill = timepoint_type), size=1.5, shape = 21, stroke = 0.1, color = "white") +
+  geom_jitter(width = 0.3, aes(fill = timepoint_type), size=1, shape = 21, stroke = 0.1, color = "white") +
   geom_boxplot(alpha=0, outliers = FALSE) +
   facet_grid(. ~ cohort, labeller = labeller(
     cohort = c(
@@ -1567,11 +1567,11 @@ figure_3C_supp <- ggplot(meta_working, aes(x=ncvssample, y=CHM_LU_richness_disco
   labs(y = "Ratio of the discovered vOTUs \n with sufficient quality to all discovered vOTUs", fill = "Timepoints", tag="c") +
   theme_bw() +
   theme(
-    strip.text = ggtext::element_markdown(size=7),
+    strip.text = ggtext::element_markdown(size=5),
     axis.title.x = element_blank(),
     axis.title.y = element_text(size = 8),
-    axis.text.x = element_text(size = 6),
-    axis.text.y = element_text(size = 6),
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 5),
+    axis.text.y = element_text(size = 5),
     legend.title = element_text(size = 8),
     legend.text = element_text(size = 6),
     legend.position = "bottom",
@@ -1602,7 +1602,7 @@ figure_3C_supp <- figure_3C_supp + stat_pvalue_manual(stat.test3c, tip.length = 
 
 
 figure_3D_supp <- ggplot(meta_working, aes(x=ncvssample, y=diversity)) +
-  geom_jitter(width = 0.3, aes(fill = timepoint_type), size=1.5, shape = 21, stroke = 0.1, color = "white") +
+  geom_jitter(width = 0.3, aes(fill = timepoint_type), size=1, shape = 21, stroke = 0.1, color = "white") +
   geom_boxplot(alpha=0, outliers = FALSE) +
   facet_grid(. ~ cohort, labeller = labeller(
     cohort = c(
@@ -1614,11 +1614,11 @@ figure_3D_supp <- ggplot(meta_working, aes(x=ncvssample, y=diversity)) +
   labs(y = "Shannon diversity", fill = "Timepoints", tag="d") +
   theme_bw() +
   theme(
-    strip.text = ggtext::element_markdown(size=7),
+    strip.text = ggtext::element_markdown(size=5),
     axis.title.x = element_blank(),
     axis.title.y = element_text(size = 8),
-    axis.text.x = element_text(size = 6),
-    axis.text.y = element_text(size = 6),
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 5),
+    axis.text.y = element_text(size = 5),
     legend.title = element_text(size = 8),
     legend.text = element_text(size = 6),
     legend.position = "bottom",
@@ -1651,7 +1651,7 @@ figure_3_supp <- ((figure_3A_supp + figure_3B_supp) / (figure_3C_supp + figure_3
 
 # Save the combined plot as a PDF
 ggsave("Supplementary_figure3.pdf", figure_3_supp, width = 21/2.54, height = 21/2.54)
-ggsave("Supplementary_figure3.png", figure_3_supp, width = 21/2.54, height = 21/2.54)
+ggsave("Supplementary_figure3.png", figure_3_supp, width = 15.92/2.54, height = 15.92/2.54)
 
 
 figure_4A_supp <- ggplot(table_for_plot_cor_combine_melt, aes(x = same_diff, y = value)) +
@@ -1672,7 +1672,7 @@ figure_4A_supp <- ggplot(table_for_plot_cor_combine_melt, aes(x = same_diff, y =
   labs(x="Study", y="% vOTUs shared with NCs", tag="a") +
   theme_bw() +
   theme(
-    strip.text = ggtext::element_markdown(size=7),
+    strip.text = ggtext::element_markdown(size=6),
     plot.title = element_text(size = 10),
     axis.title.x = element_text(size = 8),
     axis.title.y = element_text(size = 8),
@@ -1712,7 +1712,7 @@ figure_4B_supp <- ggplot(table_for_plot_cor_combine_melt_subset_log, aes(x = Typ
   labs(y = "log10(% vOTUs shared with NCs)", tag="b") +
   theme_bw() +
   theme(
-    strip.text = ggtext::element_markdown(size=7),
+    strip.text = ggtext::element_markdown(size=6),
     plot.title = element_text(size = 10),
     axis.title.x = element_text(size = 8),
     axis.title.y = element_text(size = 8),
@@ -1742,7 +1742,7 @@ figure_4_supp <- figure_4A_supp | figure_4B_supp +
     heights = c(1, 0.6))
 
 ggsave("Supplementary_figure4.pdf", figure_4_supp, width = 21/2.54, height = 21/2.54)
-ggsave("Supplementary_figure4.png", figure_4_supp, width = 21/2.54, height = 21/2.54)
+ggsave("Supplementary_figure4.png", figure_4_supp, width = 15.92/2.54, height = 15.92/2.54)
 #######################################################################################################################################
 
 ## Metadata tuning for public repository
