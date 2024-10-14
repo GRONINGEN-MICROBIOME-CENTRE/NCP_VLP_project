@@ -153,14 +153,6 @@ dim(filtered_host_prediction)  # 188122      5
 strains_df_ini <- read.delim('../inStrain_70_vOTUr_pairwise_popANI.txt')
 #######################################################################################################################################
 
-##############################################################################################################################################################################################################################################################################
-
-
-# THIS BLOCK IS DEDICATED TO EXPLORING THE RESULTS, WHEN THE RPKM TABLE IS NOT FILTERED, HENCE ALL vOTUs INCLUDED
-
-
-##############################################################################################################################################################################################################################################################################
-
 ## Adding alpha diversity and richness to meta_working
 #######################################################################################################################################
 row.names(meta_working) <- meta_working$Sample_name
@@ -173,6 +165,10 @@ row.names(meta_working) <- meta_working$Sample_name
 meta_working <- merge(meta_working, richness_table, by="row.names")
 colnames(meta_working)[colnames(meta_working) == "colSums(RPKM_count)"] <- "richness"
 meta_working$Row.names <- NULL
+
+meta_all_with_qc_curated <- merge(meta_all_with_qc_curated, meta_working[c("Sample_name", "richness", "diversity")], all.x = T)
+meta_all_with_qc_curated$richness[is.na(meta_all_with_qc_curated$richness)] <- 0
+meta_all_with_qc_curated$diversity[is.na(meta_all_with_qc_curated$diversity)] <- 0
 #######################################################################################################################################
 
 ## Analysis for the vOTUs composition in NC vs samples: richness and CHM ratio detected
@@ -454,6 +450,7 @@ write.table(summarized_df3_frac_melt, "/scratch/p309176/amg_paper/raw_data/NCP_s
 write.table(summarized_df4_frac_melt, "/scratch/p309176/amg_paper/raw_data/NCP_studies_vir/downstream_R/df_for_figures1e.tsv", sep='\t', row.names=F, col.names=T, quote=F)
 
 meta_working$ncvssample <- factor(meta_working$ncvssample, levels = c("NCs", "SAMPLES"))
+meta_all_with_qc_curated$ncvssample <- factor(meta_all_with_qc_curated$ncvssample, levels = c("NCs", "SAMPLES"))
 
 figure_1A <- ggplot(meta_working, aes(x=ncvssample, y=clean_reads_comb)) +
   geom_jitter(width = 0.3, aes(fill = timepoint_type), size=1.5, shape = 21, stroke = 0.1, color = "white") +
@@ -472,13 +469,13 @@ figure_1A <- ggplot(meta_working, aes(x=ncvssample, y=clean_reads_comb)) +
     strip.text = ggtext::element_markdown(size=7),
     axis.title.x = element_blank(),
     axis.title.y = element_text(size = 8),
-    axis.text.x = element_text(size = 6),
-    axis.text.y = element_text(size = 6),
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 7),
+    axis.text.y = element_text(size = 7),
     legend.title = element_text(size = 8),
-    legend.text = element_text(size = 6),
+    legend.text = element_text(size = 7),
     legend.position = "bottom",
     strip.background = element_rect(fill = "transparent"),
-    plot.tag = element_text(face="bold", size=6)) +
+    plot.tag = element_text(face="bold", size=13)) +
   guides(
     fill = guide_legend(
       override.aes = list(size = 3)
@@ -506,7 +503,7 @@ stat.test1$p.signif <- c("ns", "ns", "ns", "NA")
 
 figure_1A <- figure_1A + stat_pvalue_manual(stat.test1, tip.length = 0.02, size=2.5, label = "p.signif")
 
-figure_1B <- ggplot(meta_working[!(meta_working$Sample_name %in% c("bctrl4633v", "bctrl4654v", "bctrl4676v", "bctrl4699v")), ], aes(x=ncvssample, y=richness)) +
+figure_1B <- ggplot(meta_all_with_qc_curated[meta_all_with_qc_curated$clean_reads_comb > 0, ], aes(x=ncvssample, y=richness)) +
   geom_jitter(width = 0.3, aes(fill = timepoint_type), size=1.5, shape = 21, stroke = 0.1, color = "white") +
   geom_boxplot(alpha=0, outliers = FALSE) +
   facet_grid(. ~ cohort, labeller = labeller(
@@ -523,12 +520,12 @@ figure_1B <- ggplot(meta_working[!(meta_working$Sample_name %in% c("bctrl4633v",
     strip.text = ggtext::element_markdown(size=7),
     axis.title.x = element_blank(),
     axis.title.y = element_text(size = 8),
-    axis.text.x = element_text(size = 6),
-    axis.text.y = element_text(size = 6),
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 7),
+    axis.text.y = element_text(size = 7),
     legend.title = element_text(size = 8),
-    legend.text = element_text(size = 6),
+    legend.text = element_text(size = 7),
     strip.background = element_rect(fill = "transparent"),
-    plot.tag = element_text(face="bold", size=6),
+    plot.tag = element_text(face="bold", size=13),
     legend.position = "bottom") +
   guides(
     fill = guide_legend(
@@ -572,14 +569,14 @@ figure_1C <- ggplot(summarized_df2_frac_melt, aes(x = ncvssample, y = value, fil
   labs(tag="c") +
   theme(
     strip.text = ggtext::element_markdown(size=7),
-    axis.text.x = element_text(angle = 45, hjust = 1, size = 6),
-    axis.text.y = element_text(size = 6),
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 7),
+    axis.text.y = element_text(size = 7),
     axis.title = element_text(size = 8),
     legend.title = element_text(size = 8),
-    legend.text = element_text(size = 6),
+    legend.text = element_text(size = 7),
     legend.key.size = unit(0.3, "cm"),
     strip.background = element_rect(fill = "transparent"),
-    plot.tag = element_text(face="bold", size=6),
+    plot.tag = element_text(face="bold", size=13),
     legend.position = "bottom"
   ) +
   labs(x = "", y = "Mean fraction of the viral group richness \n (vOTUs with at least 50% completeness)", fill = "Viral group")
@@ -599,14 +596,14 @@ figure_1D <- ggplot(summarized_df3_frac_melt, aes(x = ncvssample, y = value, fil
   labs(tag="d")+
   theme(
     strip.text = ggtext::element_markdown(size=7),
-    axis.text.x = element_text(angle = 45, hjust = 1, size = 6),
-    axis.text.y = element_text(size = 6),
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 7),
+    axis.text.y = element_text(size = 7),
     axis.title = element_text(size = 8),
     legend.title = element_text(size = 8),
-    legend.text = element_text(size = 6),
+    legend.text = element_text(size = 7),
     legend.key.size = unit(0.3, "cm"),
     strip.background = element_rect(fill = "transparent"),
-    plot.tag = element_text(face="bold", size=6),
+    plot.tag = element_text(face="bold", size=13),
     legend.position = "bottom"
   ) +
   labs(x = "", y = "Mean fraction of the host group richness \n (vOTUs with at least 50% completeness)", fill = "Host group")
@@ -628,18 +625,18 @@ figure_1E <- ggplot(summarized_df4_frac_melt, aes(x = ncvssample, y = value, fil
   labs(tag="e") +
   theme(
     strip.text = ggtext::element_markdown(size=7),
-    axis.text.x = element_text(angle = 45, hjust = 1, size = 6),
-    axis.text.y = element_text(size = 6),
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 7),
+    axis.text.y = element_text(size = 7),
     axis.title = element_text(size = 8),
     legend.title = element_text(size = 8),
-    legend.text = element_text(size = 6, face = "italic"),
+    legend.text = element_text(size = 7, face = "italic"),
     legend.key.size = unit(0.3, "cm"),
     strip.background = element_rect(fill = "transparent"),
-    plot.tag = element_text(face="bold", size=6),
+    plot.tag = element_text(face="bold", size=13),
     legend.position = "bottom"
   ) +
   labs(x = "", y = "Mean fraction of the host genus richness \n (vOTUs with at least 50% completeness)", fill = "Host genus") +
-  guides(fill=guide_legend(nrow=4, byrow=F, title.position = 'top', title.hjust = 0.5,label.theme = element_text(face = "italic", size=5)), 
+  guides(fill=guide_legend(nrow=5, byrow=F, title.position = 'top', title.hjust = 0.5,label.theme = element_text(face = "italic", size=7)), 
          alpha=guide_legend(nrow=2, byrow=TRUE, title.position = 'top', title.hjust = 0.5))
 
 
@@ -651,6 +648,7 @@ combined_plot <- (figure_1A + figure_1B + plot_layout(nrow=1, guides = "collect"
 ggsave("combined_figure.pdf", combined_plot, width = 21/2.54, height = 29.7/2.54)
 
 meta_working$ncvssample <- factor(meta_working$ncvssample, levels = c("SAMPLES", "NCs"))
+meta_all_with_qc_curated$ncvssample <- factor(meta_all_with_qc_curated$ncvssample, levels = c("SAMPLES", "NCs"))
 
 summarized_df2_frac_melt$ncvssample <- factor(summarized_df2_frac_melt$ncvssample, levels = c("SAMPLES", "NCs"))
 summarized_df3_frac_melt$ncvssample <- factor(summarized_df3_frac_melt$ncvssample, levels = c("SAMPLES", "NCs"))
@@ -686,10 +684,6 @@ summary(lmer(CHM_LU_richness_discovered_ratio ~  ncvssample + (1|nc_subject_grou
 summary(lmer(CHM_LU_richness_discovered_ratio ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_working[meta_working$cohort == "maqsood", ]))
 summary(lmer(CHM_LU_richness_discovered_ratio ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_working[meta_working$cohort == "shah", ]))
 p.adjust(c(0.0742, 0.020469, 0.8654), method="BH")
-
-meta_all_with_qc_curated <- merge(meta_all_with_qc_curated, meta_working[c("Sample_name", "richness", "diversity")], all.x = T)
-meta_all_with_qc_curated$richness[is.na(meta_all_with_qc_curated$richness)] <- 0
-meta_all_with_qc_curated$diversity[is.na(meta_all_with_qc_curated$diversity)] <- 0
 
 summary(lmer(richness ~ ncvssample + (1|cohort/nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$clean_reads_comb > 0, ]))
 summary(lmer(richness ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$clean_reads_comb > 0 & 
@@ -1601,7 +1595,7 @@ stat.test3c$p.signif <- c("ns", "ns", "ns", "NA")
 figure_3C_supp <- figure_3C_supp + stat_pvalue_manual(stat.test3c, tip.length = 0.02, size=2.5, label = "p.signif")
 
 
-figure_3D_supp <- ggplot(meta_working, aes(x=ncvssample, y=diversity)) +
+figure_3D_supp <- ggplot(meta_all_with_qc_curated[meta_all_with_qc_curated$clean_reads_comb > 0, ], aes(x=ncvssample, y=diversity)) +
   geom_jitter(width = 0.3, aes(fill = timepoint_type), size=1, shape = 21, stroke = 0.1, color = "white") +
   geom_boxplot(alpha=0, outliers = FALSE) +
   facet_grid(. ~ cohort, labeller = labeller(
