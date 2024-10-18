@@ -1,11 +1,9 @@
 
-# Viruses in Negative Controls
+# Negativeome in Early-Life Virome Studies: Characterization and Decontamination
 
-This repository contains the scripts used during the data analysis for the paper **“Negative control virome: characterization and decontamination in early-life studies”**.
+This repository contains the scripts used during the data analysis for the paper **“Negativeome in Early-Life Virome Studies: Characterization and Decontamination”**.
 
-## Citation
-
-The citation for this study will be provided after publication.
+You can download the current version of the paper from [BioRxiv](https://www.biorxiv.org/content/10.1101/2024.10.14.618243v1).
 
 ## Short Summary
 
