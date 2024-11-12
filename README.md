@@ -36,15 +36,31 @@ Details regarding metadata and the study setups can be found in the original pub
 The scripts in this repository are divided into three categories:
 
 ### 1. Upstream Analysis
-- **Location:** [Upstream Analysis Folder](https://github.com/GRONINGEN-MICROBIOME-CENTRE/Lifelines_NEXT/tree/main/NCP_VLP_project/Upstream_analysis)
+- **Location:** [Upstream Analysis Folder](https://github.com/GRONINGEN-MICROBIOME-CENTRE/NCP_VLP_project/tree/master/Upstream_analysis)
 - This section contains scripts used for raw data processing up to the creation of RPKM tables. The scripts are organized into four study-specific folders, named after the first authors of the publications used in this study. 
 - Additionally, the folder named "NCP_all" includes scripts for pooled data analysis, including dereplication, decontamination, and RPKM table creation.
 - Further information can be found in the README files provided within each folder.
 
 ### 2. Downstream Analysis
-- **Location:** [Downstream Analysis Folder](https://github.com/GRONINGEN-MICROBIOME-CENTRE/Lifelines_NEXT/tree/main/NCP_VLP_project/Downstream_analysis)
-- This section contains scripts used for statistical analysis and graph creation.
+- **Location:** [Downstream Analysis Folder](https://github.com/GRONINGEN-MICROBIOME-CENTRE/NCP_VLP_project/tree/master/Downstream_analysis)
+- This section contains scripts used for statistical analysis and plots creation.
 
 ### 3. Metadata processing
-- **Location:** [Metadata Folder](https://github.com/GRONINGEN-MICROBIOME-CENTRE/Lifelines_NEXT/tree/main/NCP_VLP_project/Metadata_processing)
+- **Location:** [Metadata Folder](https://github.com/GRONINGEN-MICROBIOME-CENTRE/NCP_VLP_project/tree/master/Metadata_processing)
 - This section contains scripts used for metadata creation.
+
+## Associated data
+
+The datasets analyzed in this study are publicly accessible. Sequencing data from Maqsood et al., Liang et al., and Shah et al. can be found on the European Nucleotide Archive under project identifiers PRJEB33578, PRJNA524703, and PRJEB46943, respectively. Sequencing data for Garmaeva et al. is hosted in the European Genome-Phenome Archive (EGA) under study ID EGAS00001005969. Relevant source data, such as redundant viral sequences, vOTU representatives, associated metadata, and a virus sequence database from negative control samples (version 1.0.0), are available through the [FigShare repository](https://doi.org/10.6084/m9.figshare.27170739).
+
+A sample subset can be used to test the scripts; we recommend using the specific subset provided, with the accession list for these samples available [here].
+
+## System requirements
+
+A complete list of tools and packages, along with their respective versions used in this study, is available [here]().
+**Note:** All analyses were conducted on the Gearshift and Hábrók high-performance computing clusters, provided by the Genomics Coordination Center and the Center for Information Technology at the University of Groningen. While some portions of the analysis can be executed on a standard laptop, others are computationally intensive and may require additional time and memory, making high-performance computing resources preferable for efficient processing.
+
+## Installation and run time
+Before running the provided code, ensure that all code dependencies are installed following each tool or package's installation instructions. Installation times vary but generally complete within a day. Note that some tools require significant storage due to large database files, making high-performance computing clusters preferable.
+
+Once dependencies are installed, all code from this study is ready for execution. Estimated runtime and memory requirements are specified in the headers of the .sh scripts used in the upstream analysis. The metadata creation script has an expected runtime of under 10 minutes, while the downstream analysis typically completes within an hour.
