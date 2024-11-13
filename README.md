@@ -57,7 +57,7 @@ While we recommend using the full dataset available at the [FigShare repository]
 
 ## System requirements
 
-A complete list of tools and packages, along with their respective versions used in this study, is available [here]().
+A complete list of tools and packages, along with their respective versions used in this study, is available in the methods section of the original publication [here](https://www.biorxiv.org/content/10.1101/2024.10.14.618243v1).
 **Note:** All analyses were conducted on the Gearshift and Hábrók high-performance computing clusters, provided by the Genomics Coordination Center and the Center for Information Technology at the University of Groningen. While some portions of the analysis can be executed on a standard laptop, others are computationally intensive and may require additional time and memory, making high-performance computing resources preferable for efficient processing.
 
 ## Installation and run time
