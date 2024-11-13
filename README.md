@@ -53,7 +53,7 @@ The scripts in this repository are divided into three categories:
 
 The datasets analyzed in this study are publicly accessible. Sequencing data from Maqsood et al., Liang et al., and Shah et al. can be found on the European Nucleotide Archive under project identifiers PRJEB33578, PRJNA524703, and PRJEB46943, respectively. Sequencing data for Garmaeva et al. is hosted in the European Genome-Phenome Archive (EGA) under study ID EGAS00001005969. Relevant source data, such as redundant viral sequences, vOTU representatives, associated metadata, and a virus sequence database from negative control samples (version 1.0.0), are available through the [FigShare repository](https://doi.org/10.6084/m9.figshare.27170739).
 
-A sample subset can be used to test the scripts; we recommend using the specific subset provided, with the accession list for these samples available [here].
+While we recommend using the full dataset available at the [FigShare repository](https://doi.org/10.6084/m9.figshare.27170739) to test downstream analysis scripts and ensure reproducibility, any subset of samples from the original studies can be used for testing upstream analysis scripts.
 
 ## System requirements
 
