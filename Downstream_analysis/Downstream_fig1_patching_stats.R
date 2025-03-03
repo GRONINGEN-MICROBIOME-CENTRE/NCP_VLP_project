@@ -1,6 +1,6 @@
 ## Code description
 #######################################################################################################################################
-## Script for the negative control sharing paper
+## Script for the negativeome paper
 #  If you would like to reproduce the results outlined in the paper, please note that column names and filenames have been modified in
 #  the deposited versions of the files in the database to improve readability. Additionally, some columns were removed from the initial
 #  tables, as indicated at the end of the script, since they were not used in the analysis. The code for renaming columns and saving
