@@ -47,7 +47,8 @@ df_for_figure2d$Type <- factor(df_for_figure2d$Type, levels = c("same", "differe
 # FIGURE 2a
 figure_2A <- readRDS(file="burkholderia.rds")
 figure_2A$labels$tag <- "a"
-figure_2A <- figure_2A + patchwork::plot_annotation(title = "Burkholderia phage L41225")
+figure_2A$labels$title <- "Burkholderia phage L41225"
+
 
 # FIGURE 2b
 figure_2B <- readRDS(file="phix.rds")
@@ -60,16 +61,16 @@ figure_2C <- ggplot(df_for_figure2c, aes(x = type_cohort, y = Distance )) +
   scale_y_log10() +
   facet_grid( ~ category, scales = "free", labeller = labeller(
     category = c(
-      "NCs" = "NCs and NCs",
-      "Samples" = "NCs and Samples"
+      "NCs" = "NCs vs NCs",
+      "Samples" = "NCs vs Samples"
     ))) +
-  labs(y = "log10(1 - (Bray-Curtis dissimilarity))", x = "Type of cohort \n (samples from the same or different cohort compared)", tag="c") +
+  labs(y = "log<sub>10</sub>Similarity index", x = "study", tag="c") +
   theme_bw() +
   theme(
     strip.text = ggtext::element_markdown(size=7),
     #plot.title = element_text(size = 10),
-    axis.title.x = element_blank(),
-    axis.title.y = element_text(size = 8),
+    axis.title.x = element_text(size=8),
+    axis.title.y = ggtext::element_markdown(size = 8),
     axis.text.x = element_text(size = 7), 
     axis.text.y = element_text(size = 7),
     strip.background = element_rect(fill = "transparent"),
@@ -85,12 +86,9 @@ stat.test2c <- df_for_figure2c[df_for_figure2c$cohort_nc!="garmaeva",] %>%
 stat.test2c <- stat.test2c %>% 
   add_xy_position(x = "type_cohort", dodge = 0.8)
 
-stat.test2c$y.position <- log10(min(1-df_for_figure2c$Distance))
+stat.test2c$y.position <- 1
 
-stat.test2d$xmin <- 1
-stat.test2d$xmax <- 2
-
-stat.test2d$p.adj.signif <- "***"
+stat.test2c$p.adj.signif <- "***"
 
 figure_2C <- figure_2C + 
   stat_pvalue_manual(stat.test2c, tip.length = 0.02, size=2.5, label = "p.adj.signif")
@@ -161,12 +159,12 @@ stat.test2e <- df_for_figure2e %>%
   add_significance()
 
 stat.test2e <- stat.test2e %>% add_xy_position(x = "value")
-# stat.test2e$y.position <- log10(stat.test2e$y.position)
 
 stat.test2e$xmin <- 1
 stat.test2e$xmax[stat.test2e$cohort == "garmaeva"] <- 5
 stat.test2e$xmax[stat.test2e$cohort == "liang"] <- 3
 stat.test2e <- stat.test2e[c(4, 12), ]
+stat.test2e$y.position <- c(30, 105)
 
 stat.test2e$p.signif <- c("ns", "***")
 figure_2E <- figure_2E + stat_pvalue_manual(stat.test2e, tip.length = 0.009, size=2.5, label = "p.signif")
@@ -176,8 +174,7 @@ figure_2E
 # FIGURE 2f
 figure_2F <- readRDS(file="micro_bacteroides.rds")
 figure_2F$labels$tag <- "f"
-figure_2F <- figure_2F + patchwork::plot_annotation(title = "Bacteroides phage L6428")
-
+figure_2F$labels$title <- "Bacteroides phage L6428"
 
 
 # Combine the plots using patchwork
@@ -185,6 +182,6 @@ figure_2BCD <- (figure_2B | figure_2C | figure_2D) + plot_layout(widths = c(2,3,
 figure_2EF <- (figure_2E | figure_2F) + plot_layout(widths = c(3.5,6.5))
 combined_plot2 <- figure_2A / figure_2BCD / figure_2EF + plot_layout(heights  = c(3, 4, 3))
 
-ggsave("combined_figure2.pdf", combined_plot2, width = 21/2.54, height = 24.7/2.54)
+ggsave("combined_figure2_UPD.pdf", combined_plot2, width = 21/2.54, height = 24.7/2.54)
 #######################################################################################################################################
 
