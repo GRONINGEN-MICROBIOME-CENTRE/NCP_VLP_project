@@ -47,7 +47,7 @@ df_for_figure2d$Type <- factor(df_for_figure2d$Type, levels = c("same", "differe
 # FIGURE 2a
 figure_2A <- readRDS(file="burkholderia.rds")
 figure_2A$labels$tag <- "a"
-figure_2A
+figure_2A <- figure_2A + patchwork::plot_annotation(title = "Burkholderia phage L41225")
 
 # FIGURE 2b
 figure_2B <- readRDS(file="phix.rds")
@@ -134,14 +134,14 @@ figure_2D
 figure_2E <- ggplot(df_for_figure2e, aes(x = Timepoint, y = value)) +
   geom_jitter(width = 0.1, fill = "#2E236C", size = 1.3, shape = 21, stroke = 0.1, color = "white") +
   geom_boxplot(fill = "#C8ACD6", alpha=0.3, outlier.alpha = 0, width=0.5) +
-  scale_y_log10() +
+  # scale_y_log10() +
   facet_grid(. ~ cohort, scales = "free_x",
              space='free_x', labeller = labeller(
     cohort = c(
       "garmaeva" = "Samples Garmaeva *et al.* <br>",
       "liang" = "Samples Liang *et al.* <br>")
   )) +
-  labs(y = "log10(% shared vOTUs)", tag="e") +
+  labs(y = "% shared vOTUs", tag="e") +
   theme_bw() +
   theme(
     strip.text = ggtext::element_markdown(size=6),
@@ -161,7 +161,7 @@ stat.test2e <- df_for_figure2e %>%
   add_significance()
 
 stat.test2e <- stat.test2e %>% add_xy_position(x = "value")
-stat.test2e$y.position <- log10(stat.test2e$y.position)
+# stat.test2e$y.position <- log10(stat.test2e$y.position)
 
 stat.test2e$xmin <- 1
 stat.test2e$xmax[stat.test2e$cohort == "garmaeva"] <- 5
@@ -176,7 +176,7 @@ figure_2E
 # FIGURE 2f
 figure_2F <- readRDS(file="micro_bacteroides.rds")
 figure_2F$labels$tag <- "f"
-
+figure_2F <- figure_2F + patchwork::plot_annotation(title = "Bacteroides phage L6428")
 
 
 
