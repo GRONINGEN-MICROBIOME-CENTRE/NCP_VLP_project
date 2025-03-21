@@ -258,10 +258,11 @@ phix <- ggtree(phylo2,options(ignore.negative.edge = T),layout = "rectangular") 
         #legend.position = c(0.1,0.7), # for phix
         legend.background = element_rect(fill=NA),
         legend.direction = "vertical", legend.box = "vertical",
-        legend.box.background = element_rect(
-          fill = '#FFFFFF', size = 0.0, linetype = "solid"),
-        legend.spacing.y = unit(0.5, "lines"),
-        legend.margin = margin(0, 0, 0, 0)) +
+        #legend.box.background = element_rect(
+        #  fill = '#FFFFFF', size = 0.0, linetype = "solid"),
+        #legend.spacing.y = unit(0.5, "lines"),
+        #legend.margin = margin(0, 0, 0, 0)
+        ) +
   guides(fill=guide_legend(order=1, override.aes=list(shape=21))) + 
   xlim(0,max(phylo1$edge.length) * xlimMulti)
 
