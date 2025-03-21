@@ -6,20 +6,28 @@
 
 ## Load libraries
 #######################################################################################################################################
-library(readr)
-library(vegan)
-library(dplyr)
-library(stringr)
-library(reshape2)
-library(tidyr)
 library(ggplot2)
-library(ggrepel)
-library(ggtext)
-library(patchwork)
-library(ggtree)
-library(lmerTest)
+library(ComplexUpset)
+library(readr)
+library(tidyverse)
 library(rstatix)
 library(ggpubr)
+library(patchwork)
+
+# library(vegan)
+# library(dplyr)
+# library(stringr)
+# library(reshape2)
+# library(tidyr)
+# library(ggplot2)
+# library(ggrepel)
+# library(ggtext)
+# library(patchwork)
+# library(ggtree)
+# library(lmerTest)
+# 
+# 
+
 #######################################################################################################################################
 
 ## Set the working directory
@@ -29,12 +37,10 @@ setwd("~/Desktop/Projects_2024/AMG_paper/")
 
 ## Load the  data
 #######################################################################################################################################
+nc_sharing <- read.table('data_upset_plot_NCs_sharing.txt', sep='\t', header=T, check.names = F)
+studies <- colnames(nc_sharing)
+
 df_for_figure2c <- as.data.frame(read_tsv('df_for_figure2c.tsv'))
-df_for_figure2d <- as.data.frame(read_tsv('df_for_figure2d.tsv'))
-df_for_figure2e <- as.data.frame(read_tsv('df_for_figure2e.tsv'))
-df_for_figure2e$Timepoint <- factor(df_for_figure2e$Timepoint, levels = c("M0", "M1", "M2", "M3", "M4", "M6", "M12"))
-df_for_figure2e <- df_for_figure2e[df_for_figure2e$Dataset == "RPKM_count", ]
-df_for_figure2d$Type <- factor(df_for_figure2d$Type, levels = c("same", "different"))
 #######################################################################################################################################
 
 ## Set the working directory
@@ -44,18 +50,33 @@ df_for_figure2d$Type <- factor(df_for_figure2d$Type, levels = c("same", "differe
 
 ## Patching the Figure 2
 #######################################################################################################################################
-# FIGURE 2a
-figure_2A <- readRDS(file="burkholderia.rds")
-figure_2A$labels$tag <- "a"
-figure_2A$labels$title <- "Burkholderia phage L41225"
+# FIGURE 2a, UpSet plot:
+tada <- colnames(nc_sharing)
+F2A <- upset(nc_sharing, studies, name = NULL, 
+      set_sizes=(
+  upset_set_size(mapping=aes(fill='bars_color'))
+  + ylab('N vOTUs in NCs') +  
+    scale_fill_manual(values=c('bars_color'='#8174A0'), guide='none' ) )
+    ) +
+  labs(tag="a") +
+  theme(
+    plot.tag = element_text(face = "bold"), 
+    plot.tag.position = c(-0.37, 2.5),
+    axis.text.y = ggtext::element_markdown()
+  )
+
+#
+figure_2B <- readRDS(file="burkholderia.rds")
+figure_2B$labels$tag <- "b"
+figure_2B$labels$title <- "Burkholderia phage L41225"
 
 
 # FIGURE 2b
-figure_2B <- readRDS(file="phix.rds")
-figure_2B$labels$tag <- "b"
+figure_2C <- readRDS(file="phix.rds")
+figure_2C$labels$tag <- "c"
 
 # FIGURE 2c
-figure_2C <- ggplot(df_for_figure2c, aes(x = type_cohort, y = Distance )) +
+figure_2D <- ggplot(df_for_figure2c, aes(x = type_cohort, y = Distance )) +
   geom_jitter(width = 0.3, fill = "#2E236C", size = 1.3, shape = 21, stroke = 0.1, color = "white") +
   geom_boxplot(fill = "#C8ACD6", alpha=0.3, outlier.alpha = 0) +
   scale_y_log10() +
@@ -64,15 +85,15 @@ figure_2C <- ggplot(df_for_figure2c, aes(x = type_cohort, y = Distance )) +
       "NCs" = "NCs vs NCs",
       "Samples" = "NCs vs Samples"
     ))) +
-  labs(y = "log<sub>10</sub>Similarity index", x = "study", tag="c") +
+  labs(y = "log<sub>10</sub>Similarity index", x = "study", tag="d") +
   theme_bw() +
   theme(
-    strip.text = ggtext::element_markdown(size=7),
+    strip.text = ggtext::element_markdown(size=8),
     #plot.title = element_text(size = 10),
     axis.title.x = element_text(size=8),
-    axis.title.y = ggtext::element_markdown(size = 8),
-    axis.text.x = element_text(size = 7), 
-    axis.text.y = element_text(size = 7),
+    axis.title.y = ggtext::element_markdown(size = 9),
+    axis.text.x = element_text(size = 8), 
+    axis.text.y = element_text(size = 8),
     strip.background = element_rect(fill = "transparent"),
     plot.tag = ggtext::element_markdown(face = "bold")
   )
@@ -90,98 +111,17 @@ stat.test2c$y.position <- 1
 
 stat.test2c$p.adj.signif <- "***"
 
-figure_2C <- figure_2C + 
+figure_2D <- figure_2D + 
   stat_pvalue_manual(stat.test2c, tip.length = 0.02, size=2.5, label = "p.adj.signif")
-figure_2C
-
-# FIGURE 2d
-correlations <- df_for_figure2d %>%
-  group_by(cohort) %>%
-  summarize(cor = cor(different_cohort_NC_presence, same_cohort_NC_presence, method = "spearman"))
-
-figure_2D <- ggplot(df_for_figure2d, aes(x=different_cohort_NC_presence, y=same_cohort_NC_presence)) +
-  geom_point(size = 0.7, color="#2E236C", alpha=0.75) +  # Adjusted point size and added transparency
-  geom_smooth(method="lm", color="#2E236C", fill="#C8ACD6", se=TRUE, linewidth=0.5) +  # Use linewidth instead of size
-  facet_wrap(~ cohort, nrow = 2, ncol = 2, scales = "free", labeller = labeller(
-    cohort = c(
-      "garmaeva" = "Samples Garmaeva *et al.* <br>",
-      "liang" = "Samples Liang *et al.* <br>",
-      "maqsood" = "Samples Maqsood *et al.* <br>",
-      "shah" = "Samples Shah *et al.* <br>"
-    )
-  )) +
-  labs(x = "% shared vOTUs with NCs from different studies", y = "% shared vOTUs with NCs from same study", tag="d") +
-  theme_bw() +
-  theme(
-    strip.text = ggtext::element_markdown(size=7),
-    #plot.title = element_text(size = 10),
-    axis.title.x = element_text(size = 8),
-    axis.title.y = element_text(size = 8),
-    axis.text.x = element_text(size = 7),
-    axis.text.y = element_text(size = 7),
-    strip.background = element_rect(fill = "transparent"),
-    plot.tag = ggtext::element_markdown(face = "bold")
-  ) +
-  # Add Spearman correlation values as text on the facets
-  geom_text(data = correlations, aes(x = Inf, y = Inf, label = paste("rho = ", round(cor, 2))),
-            hjust = 1.1, vjust = 1.5, size = 3)
-
 figure_2D
-# FIGURE 2e
-
-figure_2E <- ggplot(df_for_figure2e, aes(x = Timepoint, y = value)) +
-  geom_jitter(width = 0.1, fill = "#2E236C", size = 1.3, shape = 21, stroke = 0.1, color = "white") +
-  geom_boxplot(fill = "#C8ACD6", alpha=0.3, outlier.alpha = 0, width=0.5) +
-  # scale_y_log10() +
-  facet_grid(. ~ cohort, scales = "free_x",
-             space='free_x', labeller = labeller(
-    cohort = c(
-      "garmaeva" = "Samples Garmaeva *et al.* <br>",
-      "liang" = "Samples Liang *et al.* <br>")
-  )) +
-  labs(y = "% shared vOTUs", tag="e") +
-  theme_bw() +
-  theme(
-    strip.text = ggtext::element_markdown(size=6),
-    #plot.title = element_text(size = 10),
-    axis.title.x = element_text(size = 8),
-    axis.title.y = element_text(size = 8),
-    axis.text.x = element_text(size = 7),
-    axis.text.y = element_text(size = 7),
-    strip.background = element_rect(fill = "transparent"),
-    plot.tag = ggtext::element_markdown(face = "bold")
-  )
-
-stat.test2e <- df_for_figure2e %>%
-  group_by(cohort) %>%
-  t_test(value ~ Timepoint) %>%
-  adjust_pvalue(method = "bonferroni") %>%
-  add_significance()
-
-stat.test2e <- stat.test2e %>% add_xy_position(x = "value")
-
-stat.test2e$xmin <- 1
-stat.test2e$xmax[stat.test2e$cohort == "garmaeva"] <- 5
-stat.test2e$xmax[stat.test2e$cohort == "liang"] <- 3
-stat.test2e <- stat.test2e[c(4, 12), ]
-stat.test2e$y.position <- c(30, 105)
-
-stat.test2e$p.signif <- c("ns", "***")
-figure_2E <- figure_2E + stat_pvalue_manual(stat.test2e, tip.length = 0.009, size=2.5, label = "p.signif")
-figure_2E
-
-
-# FIGURE 2f
-figure_2F <- readRDS(file="micro_bacteroides.rds")
-figure_2F$labels$tag <- "f"
-figure_2F$labels$title <- "Bacteroides phage L6428"
-
 
 # Combine the plots using patchwork
-figure_2BCD <- (figure_2B | figure_2C | figure_2D) + plot_layout(widths = c(2,3,5))
-figure_2EF <- (figure_2E | figure_2F) + plot_layout(widths = c(3.5,6.5))
-combined_plot2 <- figure_2A / figure_2BCD / figure_2EF + plot_layout(heights  = c(3, 4, 3))
+f2AB <- (F2A / figure_2B) + plot_layout(widths = c(4,6))
+f2CD <- (figure_2C | figure_2D) + plot_layout(widths = c(5, 5))
 
-ggsave("combined_figure2_UPD.pdf", combined_plot2, width = 21/2.54, height = 24.7/2.54)
+combined_plot2 <- f2AB /  f2CD + plot_layout(heights  = c(3, 3, 4))
+
+
+ggsave("combined_figure2_UPD2.pdf", combined_plot2, width = 21/2.54, height = 27/2.54)
 #######################################################################################################################################
 
