@@ -250,12 +250,12 @@ phix <- ggtree(phylo2,options(ignore.negative.edge = T),layout = "rectangular") 
   labs(shape="Sample type", fill="Study") +
   ggtitle(gsub("maqsood_bctrl4633v_N1_L5513_K159.5_E0_P0_F0", "phi X 174", names(x))) +
   geom_treescale(fontsize=3, offset = 0.5) + # for phix
-  theme(legend.text = ggtext::element_markdown(size=7), 
-        legend.title = element_text(size=7),
+  theme(legend.text = ggtext::element_markdown(size=8), 
+        legend.title = element_text(size=9),
         plot.tag = element_text(face="bold"),
-        plot.title = element_text(size=7),
+        plot.title = element_text(size=9),
         plot.title.position = "plot",
-        legend.position = c(0.1,0.7), # for phix
+        #legend.position = c(0.1,0.7), # for phix
         legend.background = element_rect(fill=NA),
         legend.direction = "vertical", legend.box = "vertical",
         legend.box.background = element_rect(
@@ -301,10 +301,10 @@ burkholderia <- ggtree(phylo2,options(ignore.negative.edge = T),layout = "rectan
    labs(shape="Sample type", fill="Study") +
    ggtitle(names(x)) +
    geom_treescale(offset=2, fontsize=3, x = 0.00005) +
-   theme(legend.text = ggtext::element_markdown(size=7), 
-         legend.title = element_text(size=7),
+   theme(legend.text = ggtext::element_markdown(size=8), 
+         legend.title = element_text(size=9),
          plot.tag = element_text(face="bold"),
-         plot.title = element_text(size=7),
+         plot.title = element_text(size=9),
          plot.title.position = "plot",
          legend.position = c(0.6,0.7),
          legend.background = element_rect(fill=NA),
@@ -345,10 +345,10 @@ micro_bacteroides <- ggtree(phylo2,options(ignore.negative.edge = T),layout = "r
   labs(shape="Sample type", fill="Study") +
   ggtitle(names(x)) +
   geom_treescale(offset=2, fontsize=3, x = 0.00005) +
-  theme(legend.text = ggtext::element_markdown(size=7), 
-        legend.title = element_text(size=7),
+  theme(legend.text = ggtext::element_markdown(size=8), 
+        legend.title = element_text(size=9),
         plot.tag = element_text(face="bold"),
-        plot.title = element_text(size=7),
+        plot.title = element_text(size=9),
         plot.title.position = "plot",
         legend.position = c(0.6,0.7),
         legend.background = element_rect(fill=NA),
