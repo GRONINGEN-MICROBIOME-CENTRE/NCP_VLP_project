@@ -28,6 +28,7 @@ library(psych)
 library(ggpubr)
 library(rstatix)
 library(MetBrewer)
+library(ggExtra)
 #######################################################################################################################################
 
 ## Set the working directory
@@ -41,36 +42,7 @@ extended_tof <- read.delim('../../VIR_DB/virus_contigs/MERGED_Extended_TOF_NCP')
 row.names(extended_tof) <- extended_tof$New_CID
 dim(extended_tof)
 extended_tof <- extended_tof %>%
-  mutate(virus_group = ifelse(grepl("Duplodnaviria", taxonomy), "dsDNA", "Unclassified"),
-         virus_group = ifelse(grepl("Inoviridae", taxonomy), "ssDNA", virus_group),
-         virus_group = ifelse(grepl("Microviridae", taxonomy), "ssDNA", virus_group),
-         virus_group = ifelse(grepl("Cressdnaviricota", taxonomy), "ssDNA", virus_group),
-         virus_group = ifelse(grepl("Cossaviricota", taxonomy), "dsDNA", virus_group),
-         virus_group = ifelse(grepl("Riboviria", taxonomy), "RNA", virus_group),
-         virus_group = ifelse(grepl("Nodaviridae", taxonomy), "RNA", virus_group),
-         virus_group = ifelse(grepl("Tolivirales", taxonomy), "RNA", virus_group),
-         virus_group = ifelse(grepl("Retroviridae", taxonomy), "RNA", virus_group),
-         virus_group = ifelse(grepl("Cystoviridae", taxonomy), "RNA", virus_group),
-         virus_group = ifelse(grepl("Picornaviridae", taxonomy), "RNA", virus_group),
-         virus_group = ifelse(grepl("Astroviridae", taxonomy), "RNA", virus_group),
-         virus_group = ifelse(grepl("Caliciviridae", taxonomy), "RNA", virus_group),
-         virus_group = ifelse(grepl("Varidnaviria", taxonomy), "dsDNA", virus_group),
-         virus_group = ifelse(grepl("Anelloviridae", taxonomy), "ssDNA", virus_group),
-         virus_group = ifelse(grepl("Portogloboviridae", taxonomy), "dsDNA", virus_group),
-         virus_group = ifelse(grepl("Bicaudaviridae", taxonomy), "dsDNA", virus_group),
-         host_group = ifelse(grepl("Caudoviricetes", taxonomy), "Prokaryotes", "Unclassified"),
-         host_group = ifelse(grepl("Herviviricetes", taxonomy), "Eukaryotes", host_group),
-         host_group = ifelse(grepl("Inoviridae", taxonomy), "Prokaryotes", host_group),
-         host_group = ifelse(grepl("Microviridae", taxonomy), "Prokaryotes", host_group),
-         host_group = ifelse(grepl("Genomoviridae", taxonomy), "Eukaryotes", host_group),
-         host_group = ifelse(grepl("Circoviridae", taxonomy), "Eukaryotes", host_group),
-         host_group = ifelse(grepl("Nanoviridae", taxonomy), "Eukaryotes", host_group),
-         host_group = ifelse(grepl("Geminiviridae", taxonomy), "Eukaryotes", host_group),
-         host_group = ifelse(grepl("Smacoviridae", taxonomy), "Eukaryotes", host_group),
-         host_group = ifelse(grepl("Cossaviricota", taxonomy), "Eukaryotes", host_group),
-         host_group = ifelse(grepl("Nodaviridae", taxonomy), "Eukaryotes", host_group),
-         host_group = ifelse(grepl("Tombusviridae", taxonomy), "Eukaryotes", host_group),
-         host_group = ifelse(grepl("Retroviridae", taxonomy), "Eukaryotes", host_group),
+  mutate(
          host_group = ifelse(grepl("Cystoviridae", taxonomy), "Prokaryotes", host_group),
          host_group = ifelse(grepl("Picornaviridae", taxonomy), "Eukaryotes", host_group),
          host_group = ifelse(grepl("Astroviridae", taxonomy), "Eukaryotes", host_group),
@@ -107,6 +79,9 @@ dim(RPKM)
 
 RPKM_count <- RPKM
 RPKM_count[RPKM_count > 0] <- 1
+
+inverse_rank_transform <- function(x) {qnorm((rank(x,na.last="keep")-0.5)/sum(!is.na(x)))}
+RPKM_INT <- as.data.frame(apply(RPKM, 1, inverse_rank_transform))  # do inverse rank transformation (PER ROW)
 
 meta_all_with_qc_curated <- as.data.frame(read_tsv('../../metadata_with_qc_NCPv2.tsv'))
 dim(meta_all_with_qc_curated)
@@ -391,6 +366,8 @@ summarized_df4 <- summarized_df4 %>%
 RPKM_host_t <- summarized_df4
 RPKM_host_t <- RPKM_host_t[rowSums(RPKM_host_t) > 0, colSums(RPKM_host_t) > 0]
 
+# RPKM_host <- as.data.frame(t(RPKM_host_t))
+# write.table(RPKM_host, "/scratch/p309176/amg_paper/raw_data/NCP_studies_vir/downstream_R/RPKM_host.tsv", sep='\t', row.names=T, col.names=T, quote=F)
 #######################################################################################################################################
 
 ## Additional analysis: NMDS
@@ -425,6 +402,84 @@ data.scores.all.hosts$Row.names <- NULL
 data.scores.all.vir$timepoint_type <- factor(data.scores.all.vir$timepoint_type, levels=c("Infant (age < 5 months)", "Infant (age > 5 months)", "Mother", "NC"), ordered = T)
 data.scores.all.hosts$timepoint_type <- factor(data.scores.all.hosts$timepoint_type, levels=c("Infant (age < 5 months)", "Infant (age > 5 months)", "Mother", "NC"), ordered = T)
 
+data.scores.all.vir <- data.scores.all.vir[data.scores.all.vir$NMDS1 >= 0.0041 & data.scores.all.vir$NMDS1 <= 0.0059
+                                                & data.scores.all.vir$NMDS2 >= 0.004 & data.scores.all.vir$NMDS2 <= 0.006, ]
+
+data.scores.all.hosts <- data.scores.all.hosts[data.scores.all.hosts$NMDS1 >= -0.003 & data.scores.all.hosts$NMDS1 <= 0.009
+                                               & data.scores.all.hosts$NMDS2 >= -0.0075 & data.scores.all.hosts$NMDS2 <= 0.009, ]
+
+# Extracting centroids
+en.vir = envfit(data.scores.all.vir[c("NMDS1", "NMDS2")], data.scores.all.vir[c("timepoint_type")], permutations = 999, na.rm = TRUE)
+en.vir$factors
+en.vir$vectors
+
+en.hosts = envfit(data.scores.all.hosts[c("NMDS1", "NMDS2")], data.scores.all.hosts[c("timepoint_type")], permutations = 999, na.rm = TRUE)
+en.hosts$factors
+en.hosts$vectors
+
+centroids.vir <- as.data.frame(scores(en.vir, "factors"))
+centroids.vir$timepoint_type <- c(gsub('timepoint_type', '', row.names(centroids.vir)))
+
+centroids.host <- as.data.frame(scores(en.hosts, "factors"))
+centroids.host$timepoint_type <- c(gsub('timepoint_type', '', row.names(centroids.host)))
+
+# Plotting
+NMDS_viruses_plot <- ggplot(data = data.scores.all.vir, aes(x = NMDS1, y = NMDS2, color=timepoint_type)) + 
+  geom_point(size = 1.5, alpha=0.6) + 
+  geom_point(data=centroids.vir, aes(fill=timepoint_type),shape=23, size=4, color='black', ) + 
+  stat_ellipse(geom = "polygon", alpha = 0.0, aes(group = timepoint_type, color=timepoint_type), linetype = 2) +
+  xlim(0.0041,0.0059) +
+  ylim(0.004, 0.006) +
+  theme_bw()+
+  labs(color = "Timepoints", title = "Bray-Curtis dissimilarity based on vOTUs") +
+  scale_color_manual(values = c("#fcbf49", "#f77f00", "#d62828", "#4C6E7F")) +
+  scale_fill_manual(values = c("#fcbf49", "#f77f00", "#d62828", "#4C6E7F")) +
+  theme(
+    plot.title = element_text(size = 10),
+    axis.title.x = element_text(size = 8),
+    axis.title.y = element_text(size = 8),
+    axis.text.x = element_text(size = 7),
+    axis.text.y = element_text(size = 7),
+    legend.title = element_text(size = 8),
+    legend.text = element_text(size = 7),
+    legend.position = "bottom") +
+  guides(fill = "none")
+NMDS_viruses_plot <- ggMarginal(NMDS_viruses_plot, type="boxplot", groupFill=T)
+ggsave("NMDS_viruses.png", NMDS_viruses_plot, width = 14/2.54, height = 14/2.54)
+
+NMDS_hosts_plot <- ggplot(data = data.scores.all.hosts, aes(x = NMDS1, y = NMDS2, color=timepoint_type)) + 
+  geom_point(size = 1.5, alpha=0.6) + 
+  geom_point(data=centroids.host, aes(fill=timepoint_type),shape=23, size=4, color='black', ) + 
+  stat_ellipse(geom = "polygon", alpha = 0.0, aes(group = timepoint_type, color=timepoint_type), linetype = 2) +
+  xlim(-0.003,0.009) +
+  ylim(-0.0075,0.009) +
+  theme_bw()+
+  labs(color = "Timepoints", title = "Bray-Curtis dissimilarity based on host-based vOTU aggregates") +
+  scale_color_manual(values = c("#fcbf49", "#f77f00", "#d62828", "#4C6E7F")) +
+  scale_fill_manual(values = c("#fcbf49", "#f77f00", "#d62828", "#4C6E7F")) +
+  theme(
+    plot.title = element_text(size = 10),
+    axis.title.x = element_text(size = 8),
+    axis.title.y = element_text(size = 8),
+    axis.text.x = element_text(size = 7),
+    axis.text.y = element_text(size = 7),
+    legend.title = element_text(size = 8),
+    legend.text = element_text(size = 7),
+    strip.background = element_rect(fill = "transparent"),
+    legend.position = "bottom") +
+  guides(fill = "none") 
+NMDS_hosts_plot <- ggMarginal(NMDS_hosts_plot, type="boxplot", groupFill=T)
+ggsave("NMDS_hosts.png", NMDS_hosts_plot, width = 14/2.54, height = 14/2.54)
+
+no_points_on_vir_NMDs <- data.scores.all.vir[data.scores.all.vir$NMDS1 < 0.0041 | data.scores.all.vir$NMDS1 > 0.0059 | 
+                                               data.scores.all.vir$NMDS2 < 0.004 | data.scores.all.vir$NMDS2 > 0.006, ]
+
+no_points_on_host_NMDs <- data.scores.all.hosts[data.scores.all.hosts$NMDS1 < -0.003 | data.scores.all.hosts$NMDS1 > 0.009 | 
+                                                  data.scores.all.hosts$NMDS2 < -0.0075 | data.scores.all.hosts$NMDS2 > 0.009, ]
+
+write.table(no_points_on_vir_NMDs[c("Sample_name", "cohort", "Type", "Timepoint")], "../no_points_on_vir_NMDs.txt", sep='\t', row.names=F, col.names=T, quote=F)
+write.table(no_points_on_host_NMDs[c("Sample_name", "cohort", "Type", "Timepoint")], "../no_points_on_host_NMDs.txt", sep='\t', row.names=F, col.names=T, quote=F)
+
 #######################################################################################################################################
 
 ## Patching the Figure 1
@@ -436,8 +491,10 @@ write.table(summarized_df4_frac_melt, "/scratch/p309176/amg_paper/raw_data/NCP_s
 
 meta_working$ncvssample <- factor(meta_working$ncvssample, levels = c("NCs", "SAMPLES"))
 meta_all_with_qc_curated$ncvssample <- factor(meta_all_with_qc_curated$ncvssample, levels = c("NCs", "SAMPLES"))
+meta_all_with_qc_curated$clean_reads_comb_for_plot <- meta_all_with_qc_curated$clean_reads_comb + (min(meta_all_with_qc_curated$clean_reads_comb[meta_all_with_qc_curated$clean_reads_comb > 0])/2)
+meta_all_with_qc_curated$richness_for_plot <- meta_all_with_qc_curated$richness + (min(meta_all_with_qc_curated$richness[meta_all_with_qc_curated$richness > 0])/2)
 
-figure_1A <- ggplot(meta_working, aes(x=ncvssample, y=clean_reads_comb)) +
+figure_1A <- ggplot(meta_all_with_qc_curated[meta_all_with_qc_curated$clean_reads_comb > 0, ], aes(x=ncvssample, y=clean_reads_comb_for_plot)) +
   geom_jitter(width = 0.3, aes(fill = timepoint_type), size=1.5, shape = 21, stroke = 0.1, color = "white") +
   geom_boxplot(alpha=0, outliers = FALSE) +
   facet_grid(. ~ cohort, labeller = labeller(
@@ -448,7 +505,7 @@ figure_1A <- ggplot(meta_working, aes(x=ncvssample, y=clean_reads_comb)) +
       "shah" = "Shah *et al.* <br>"))) +
   scale_fill_manual(values = c("#fcbf49", "#f77f00", "#d62828", "#4C6E7F")) +
   scale_y_log10() +
-  labs(y = "Number of clean reads (log10)", tag="a", fill = "Timepoints") +
+  labs(y = expression(log[10] * "Number of clean reads"), tag="a", fill = "Timepoints") +
   theme_bw() +
   theme(
     strip.text = ggtext::element_markdown(size=7),
@@ -488,7 +545,7 @@ stat.test1$p.signif <- c("ns", "ns", "ns", "NA")
 
 figure_1A <- figure_1A + stat_pvalue_manual(stat.test1, tip.length = 0.02, size=2.5, label = "p.signif")
 
-figure_1B <- ggplot(meta_all_with_qc_curated[meta_all_with_qc_curated$clean_reads_comb > 0, ], aes(x=ncvssample, y=richness)) +
+figure_1B <- ggplot(meta_all_with_qc_curated[meta_all_with_qc_curated$clean_reads_comb > 0, ], aes(x=ncvssample, y=richness_for_plot)) +
   geom_jitter(width = 0.3, aes(fill = timepoint_type), size=1.5, shape = 21, stroke = 0.1, color = "white") +
   geom_boxplot(alpha=0, outliers = FALSE) +
   facet_grid(. ~ cohort, labeller = labeller(
@@ -499,7 +556,7 @@ figure_1B <- ggplot(meta_all_with_qc_curated[meta_all_with_qc_curated$clean_read
       "shah" = "Shah *et al.* <br>"))) +
   scale_fill_manual(values = c("#fcbf49", "#f77f00", "#d62828", "#4C6E7F")) +
   scale_y_log10() +
-  labs(y = "Richness (log10)", tag="b", fill = "Timepoints") +
+  labs(y = expression(log[10] * "Richness"), tag="b", fill = "Timepoints") +
   theme_bw() +
   theme(
     strip.text = ggtext::element_markdown(size=7),
@@ -539,76 +596,18 @@ stat.test2$p.signif <- c("**", "ns", "**", "NA")
 
 figure_1B <- figure_1B + stat_pvalue_manual(stat.test2, tip.length = 0.02, size=2.5, label = "p.signif")
 
-
-summarized_df2_frac_stats$ncvssample <- factor(summarized_df2_frac_stats$ncvssample, levels = c("NCs", "SAMPLES"))
-figure_1C <- ggplot(summarized_df2_frac_stats, aes(x = variable, y = value, fill = ncvssample, color = ncvssample)) +
-  geom_jitter(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.75), 
-              size = 1.5, shape = 19, stroke = 0.1, alpha=0.3) +
-  geom_boxplot(alpha = 0, outliers = FALSE, position = position_dodge(width = 0.75)) +
-  theme_bw() +
-  scale_fill_manual(values = c("#619b8a", "#233d4d")) +
-  scale_color_manual(values = c("#619b8a", "#233d4d")) +
-  facet_grid(. ~ cohort, labeller = labeller(
-    cohort = c(
-      "garmaeva" = "Garmaeva *et al.* <br>",
-      "liang" = "Liang *et al.* <br>",
-      "maqsood" = "Maqsood *et al.* <br>",
-      "shah" = "Shah *et al.* <br>"))) +
-  labs(tag="c") +
-  theme(
-    strip.text = ggtext::element_markdown(size=7),
-    axis.text.x = element_text(angle = 45, hjust = 1, size = 7),
-    axis.text.y = element_text(size = 7),
-    axis.title = element_text(size = 8),
-    # legend.title = element_text(size = 8),
-    # legend.text = element_text(size = 7),
-    # legend.key.size = unit(0.3, "cm"),
-    strip.background = element_rect(fill = "transparent"),
-    plot.tag = element_text(face="bold", size=13),
-    legend.position = "none"
-  ) +
-  labs(x = "", y = "Fraction of the viral group richness \n (vOTUs with at least 50% completeness)", fill = "Viral group")
-
-
-summarized_df3_frac_stats$ncvssample <- factor(summarized_df3_frac_stats$ncvssample, levels = c("NCs", "SAMPLES"))
-figure_1D <- ggplot(summarized_df3_frac_stats, aes(x = variable, y = value, fill = ncvssample, color = ncvssample)) +
-  geom_jitter(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.75), 
-              size = 1.5, shape = 19, stroke = 0.1, alpha=0.3) +
-  geom_boxplot(alpha = 0, outliers = FALSE, position = position_dodge(width = 0.75)) +
-  theme_bw() +
-  scale_fill_manual(values = c("#619b8a", "#233d4d")) +
-  scale_color_manual(values = c("#619b8a", "#233d4d")) +
-  facet_grid(. ~ cohort, labeller = labeller(
-    cohort = c(
-      "garmaeva" = "Garmaeva *et al.* <br>",
-      "liang" = "Liang *et al.* <br>",
-      "maqsood" = "Maqsood *et al.* <br>",
-      "shah" = "Shah *et al.* <br>"))) +
-  labs(tag="d")+
-  theme(
-    strip.text = ggtext::element_markdown(size=7),
-    axis.text.x = element_text(angle = 45, hjust = 1, size = 7),
-    axis.text.y = element_text(size = 7),
-    axis.title = element_text(size = 8),
-    legend.title = element_text(size = 8),
-    legend.text = element_text(size = 7),
-    legend.key.size = unit(0.3, "cm"),
-    strip.background = element_rect(fill = "transparent"),
-    plot.tag = element_text(face="bold", size=13),
-    legend.position = "bottom"
-  ) +
-  labs(x = "", y = "Fraction of the host group richness \n (vOTUs with at least 50% completeness)", fill = "Host group")
-
-
-figure_1E <- ggplot(data = data.scores.all.vir, aes(x = NMDS1, y = NMDS2, color=timepoint_type)) + 
+figure_1C <- ggplot(data = data.scores.all.vir, aes(x = NMDS1, y = NMDS2, color=timepoint_type)) + 
   geom_point(size = 1.5, alpha=0.6) + 
+  geom_point(data=centroids.vir, aes(fill=timepoint_type),shape=23, size=3, color='black', ) + 
   stat_ellipse(geom = "polygon", alpha = 0.0, aes(group = timepoint_type, color=timepoint_type), linetype = 2) +
   xlim(0.0041,0.0059) +
   ylim(0.004,0.006) +
   theme_bw()+
-  labs(tag="e", color = "Timepoints") +
+  labs(tag="c", color = "Timepoints", title = "Bray-Curtis dissimilarity based on vOTUs") +
   scale_color_manual(values = c("#fcbf49", "#f77f00", "#d62828", "#4C6E7F")) +
+  scale_fill_manual(values = c("#fcbf49", "#f77f00", "#d62828", "#4C6E7F")) +
   theme(
+    plot.title = element_text(size = 8),
     strip.text = ggtext::element_markdown(size=7),
     axis.title.x = element_text(size = 8),
     axis.title.y = element_text(size = 8),
@@ -618,17 +617,23 @@ figure_1E <- ggplot(data = data.scores.all.vir, aes(x = NMDS1, y = NMDS2, color=
     legend.text = element_text(size = 7),
     strip.background = element_rect(fill = "transparent"),
     plot.tag = element_text(face="bold", size=13),
-    legend.position = "bottom") 
+    legend.position = "bottom") +
+  guides(fill = "none", color = "none") 
+figure_1C <- ggMarginal(figure_1C, type="boxplot", groupFill=T)
 
-figure_1F <- ggplot(data = data.scores.all.hosts, aes(x = NMDS1, y = NMDS2, color=timepoint_type)) + 
+
+figure_1D <- ggplot(data = data.scores.all.hosts, aes(x = NMDS1, y = NMDS2, color=timepoint_type)) + 
   geom_point(size = 1.5, alpha=0.6) + 
+  geom_point(data=centroids.host, aes(fill=timepoint_type),shape=23, size=3, color='black', ) + 
   stat_ellipse(geom = "polygon", alpha = 0.0, aes(group = timepoint_type, color=timepoint_type), linetype = 2) +
   xlim(-0.003,0.009) +
   ylim(-0.0075,0.009) +
   theme_bw()+
-  labs(tag="f", color = "Timepoints") +
+  labs(tag="d",color = "Timepoints", title = "Bray-Curtis dissimilarity based on host-based \nvOTU aggregates") +
   scale_color_manual(values = c("#fcbf49", "#f77f00", "#d62828", "#4C6E7F")) +
+  scale_fill_manual(values = c("#fcbf49", "#f77f00", "#d62828", "#4C6E7F")) +
   theme(
+    plot.title = element_text(size = 8),
     strip.text = ggtext::element_markdown(size=7),
     axis.title.x = element_text(size = 8),
     axis.title.y = element_text(size = 8),
@@ -638,17 +643,80 @@ figure_1F <- ggplot(data = data.scores.all.hosts, aes(x = NMDS1, y = NMDS2, colo
     legend.text = element_text(size = 7),
     strip.background = element_rect(fill = "transparent"),
     plot.tag = element_text(face="bold", size=13),
-    legend.position = "bottom") 
+    legend.position = "bottom") +
+  guides(fill = "none", color = "none") 
+figure_1D <- ggMarginal(figure_1D, type="boxplot", groupFill=T)
 
-combined_plot <- (figure_1A + figure_1B + plot_layout(nrow=1, guides = "collect") & theme(legend.position = "bottom")) / (figure_1C) / (figure_1D) / (figure_1E + figure_1F + plot_layout(nrow=1, guides = "collect") & theme(legend.position = "bottom"))
+combined_plot <- wrap_elements(figure_1A + figure_1B + plot_layout(nrow=1, guides = "collect") & theme(legend.position = "bottom")) /
+  (wrap_elements(figure_1C) | wrap_elements(figure_1D))
 
-ggsave("combined_figure_rebuttal.pdf", combined_plot, width = 21/2.54, height = 29.7/2.54)
+ggsave("Figure1_rebuttal_edited.pdf", combined_plot, width = 21/2.54, height = 24/2.54)
 
+summarized_df2_frac_stats$ncvssample <- factor(summarized_df2_frac_stats$ncvssample, levels = c("NCs", "SAMPLES"))
+supplementary_figure_4A <- ggplot(summarized_df2_frac_stats[summarized_df2_frac_stats$variable != "Unclassified", ], aes(x = variable, y = value, fill = ncvssample, color = ncvssample)) +
+  geom_jitter(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.75), 
+              size = 1.5, shape = 19, stroke = 0.1, alpha=0.3) +
+  geom_boxplot(alpha = 0, outliers = FALSE, position = position_dodge(width = 0.75)) +
+  theme_bw() +
+  scale_fill_manual(values = c("#619b8a", "#233d4d")) +
+  scale_color_manual(values = c("#619b8a", "#233d4d")) +
+  scale_y_continuous(limits = c(-0.05, 1.15), breaks = seq(0, 1, by = 0.25), expand = c(0, 0)) +
+  facet_grid(. ~ cohort, labeller = labeller(
+    cohort = c(
+      "garmaeva" = "Garmaeva *et al.* <br>",
+      "liang" = "Liang *et al.* <br>",
+      "maqsood" = "Maqsood *et al.* <br>",
+      "shah" = "Shah *et al.* <br>"))) +
+  labs(x = "", y = "Fraction of the viral group richness \n (vOTUs with at least 50% completeness)", fill = "Viral group", tag="a") +
+  theme(
+    strip.text = ggtext::element_markdown(size=9),
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 9),
+    axis.text.y = element_text(size = 9),
+    axis.title = element_text(size = 10),
+    strip.background = element_rect(fill = "transparent"),
+    plot.tag = element_text(face="bold", size=12),
+    legend.position = "none"
+  ) +
+  guides(color = "none", fill = "none")
+
+summarized_df3_frac_stats$ncvssample <- factor(summarized_df3_frac_stats$ncvssample, levels = c("NCs", "SAMPLES"))
+supplementary_figure_4B <- ggplot(summarized_df3_frac_stats[summarized_df3_frac_stats$variable != "Unclassified", ], aes(x = variable, y = value, fill = ncvssample, color = ncvssample)) +
+  geom_jitter(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.75), 
+              size = 1.5, shape = 19, stroke = 0.1, alpha=0.3) +
+  geom_boxplot(alpha = 0, outliers = FALSE, position = position_dodge(width = 0.75)) +
+  theme_bw() +
+  scale_fill_manual(values = c("#619b8a", "#233d4d")) +
+  scale_color_manual(values = c("#619b8a", "#233d4d")) +
+  scale_y_continuous(limits = c(-0.05, 1.15), breaks = seq(0, 1, by = 0.25), expand = c(0, 0)) +
+  facet_grid(. ~ cohort, labeller = labeller(
+    cohort = c(
+      "garmaeva" = "Garmaeva *et al.* <br>",
+      "liang" = "Liang *et al.* <br>",
+      "maqsood" = "Maqsood *et al.* <br>",
+      "shah" = "Shah *et al.* <br>"))) +
+  labs(x = "", y = "Fraction of the host group richness \n (vOTUs with at least 50% completeness)", fill = "Host group", tag="b")+
+  theme(
+    strip.text = ggtext::element_markdown(size=9),
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 9),
+    axis.text.y = element_text(size = 9),
+    axis.title = element_text(size = 10),
+    legend.title = element_text(size = 0),
+    legend.text = element_text(size = 10),
+    legend.key.size = unit(0.8, "cm"),
+    strip.background = element_rect(fill = "transparent"),
+    plot.tag = element_text(face="bold", size=12),
+    legend.position = "bottom"
+  ) +
+  guides(fill = "none")
+
+supplementary_figure4 <- supplementary_figure_4A + supplementary_figure_4B + plot_layout(nrow=2, guides = "collect") & theme(legend.position = "bottom")
+
+ggsave("supplementary_figure4.pdf", supplementary_figure4, width = 21/2.54, height = 22/2.54)
+
+meta_all_with_qc_curated$clean_reads_comb_for_plot <- NULL
+meta_all_with_qc_curated$richness_for_plot <- NULL
 meta_working$ncvssample <- factor(meta_working$ncvssample, levels = c("SAMPLES", "NCs"))
 meta_all_with_qc_curated$ncvssample <- factor(meta_all_with_qc_curated$ncvssample, levels = c("SAMPLES", "NCs"))
-
-summarized_df2_frac_melt$ncvssample <- factor(summarized_df2_frac_melt$ncvssample, levels = c("SAMPLES", "NCs"))
-summarized_df3_frac_melt$ncvssample <- factor(summarized_df3_frac_melt$ncvssample, levels = c("SAMPLES", "NCs"))
 
 #######################################################################################################################################
 
@@ -904,6 +972,118 @@ df_distances_nc_for_plot$cohort_nc <- factor(df_distances_nc_for_plot$cohort_nc,
 write.table(df_distances_nc_for_plot, "/scratch/p309176/amg_paper/raw_data/NCP_studies_vir/downstream_R/df_for_figure2c.tsv", sep='\t', row.names=F, col.names=T, quote=F)
 #######################################################################################################################################
 
+## Additional analysis - NCs vs samples
+#######################################################################################################################################
+df_distances_NS_SS <- data.frame(
+  Sample1 = rownames(bray_dist_matrix_full_rev)[row_indices],
+  Sample2 = colnames(bray_dist_matrix_full_rev)[col_indices],
+  Distance = distances
+)
+
+df_distances_NS_SS <- merge(df_distances_NS_SS, meta_working[c("Sample1", "ncvssample", "cohort", "Subject_ID", "FAM_ID")], by="Sample1", all.x=T)
+df_distances_NS_SS <- merge(df_distances_NS_SS, meta_working[c("Sample2", "ncvssample", "cohort", "Subject_ID", "FAM_ID")], by="Sample2", all.x=T)
+colnames(df_distances_NS_SS) <- c("Sample1", "Sample2", "Distance",
+                                  "Sample1_ncvssample",  "Sample1_cohort", "Sample1_Subject_ID", "Sample1_FAM_ID",
+                                  "Sample2_ncvssample",  "Sample2_cohort", "Sample2_Subject_ID", "Sample2_FAM_ID")
+
+df_distances_NS_SS <- df_distances_NS_SS[df_distances_NS_SS$Sample1_cohort == df_distances_NS_SS$Sample2_cohort, ]
+df_distances_NS_SS <- df_distances_NS_SS[!(df_distances_NS_SS$Sample1_ncvssample == "NCs" & df_distances_NS_SS$Sample2_ncvssample == "NCs"), ]
+df_distances_NS_SS <- df_distances_NS_SS[!((!is.na(df_distances_NS_SS$Sample1_FAM_ID)) & 
+                                             (!is.na(df_distances_NS_SS$Sample2_FAM_ID)) & 
+                                             df_distances_NS_SS$Sample1_FAM_ID == df_distances_NS_SS$Sample2_FAM_ID), ]
+
+df_distances_NS_SS <- df_distances_NS_SS %>%
+  mutate(category = ifelse(Sample1_ncvssample == Sample2_ncvssample, "samples", "ncs"))
+
+df_distances_NS_SS$Distance_log <- df_distances_NS_SS$Distance + (min(df_distances_NS_SS$Distance[df_distances_NS_SS$Distance > 0]) / 2)
+
+df_distances_NS_SS$category <- as.factor(df_distances_NS_SS$category)
+
+figure_NS_SS_log <- ggplot(df_distances_NS_SS, aes(x = category, y = Distance_log )) +
+  geom_jitter(width = 0.3, fill = "#2E236C", size = 1.3, shape = 21, stroke = 0.1, color = "white") +
+  geom_boxplot(fill = "#C8ACD6", alpha=0.3, outlier.alpha = 0) +
+  scale_y_log10() +
+  scale_x_discrete(labels=c("ncs" = "NCs and Samples", "samples" = "Samples and Samples")) +
+  labs(y = expression(log[10] * "Similarity index"), x = "", tag="c") +
+  theme_bw() +
+  theme(
+    strip.text = ggtext::element_markdown(size=7),
+    #plot.title = element_text(size = 10),
+    axis.title.x = element_blank(),
+    axis.title.y = element_text(size = 8),
+    axis.text.x = element_text(size = 7), 
+    axis.text.y = element_text(size = 7),
+    strip.background = element_rect(fill = "transparent"),
+    plot.tag = ggtext::element_markdown(face = "bold")
+  )
+ggsave("figure_NS_SS_log.pdf", figure_NS_SS_log, width = 14/2.54, height = 14/2.54)
+
+# Do by cohort
+figure_NS_SS_cohort <- ggplot(df_distances_NS_SS, aes(x = category, y = Distance )) +
+  geom_jitter(width = 0.3, fill = "#2E236C", size = 1.3, shape = 21, stroke = 0.1, color = "white") +
+  geom_boxplot(fill = "#C8ACD6", alpha=0.3, outlier.alpha = 0) +
+  # scale_y_log10() +
+  scale_x_discrete(labels=c("ncs" = "NCs and Samples", "samples" = "Samples and Samples")) +
+  facet_wrap(~ Sample1_cohort, nrow = 2, ncol = 2, scales = "free", labeller = labeller(
+    Sample1_cohort = c(
+      "garmaeva" = "Samples Garmaeva *et al.* <br>",
+      "liang" = "Samples Liang *et al.* <br>",
+      "maqsood" = "Samples Maqsood *et al.* <br>",
+      "shah" = "Samples Shah *et al.* <br>"
+    )
+  )) +
+  labs(y = expression("Similarity index"), x = "", tag="c") +
+  theme_bw() +
+  theme(
+    strip.text = ggtext::element_markdown(size=7),
+    axis.title.x = element_blank(),
+    axis.title.y = element_text(size = 8),
+    axis.text.x = element_text(size = 7), 
+    axis.text.y = element_text(size = 7),
+    strip.background = element_rect(fill = "transparent"),
+    plot.tag = ggtext::element_markdown(face = "bold")
+  )
+ggsave("figure_NS_SS_cohort.pdf", figure_NS_SS_cohort, width = 14/2.54, height = 14/2.54)
+
+
+# Permutation analysis: see detailed comments in the previous section
+results <- list()
+cohort_values <- c("garmaeva", "liang", "maqsood", "shah")
+
+for (cohort in cohort_values) {
+  df_filtered <- df_distances_NS_SS[df_distances_NS_SS$Sample1_cohort == cohort, ]
+  baseline_result <- wilcox.test(Distance ~ category, data = df_filtered)
+  baseline_pvalue <- baseline_result$p.value
+  
+  set.seed(123)
+  n_permutations <- 1000
+  ppermute <- numeric(n_permutations)
+  
+  for (i in 1:n_permutations) {
+    print(i)
+    print(cohort)
+    shuffled_distances <- sample(df_filtered$Distance)
+    df_shuffled <- df_filtered
+    df_shuffled$Distance <- shuffled_distances
+    result <- wilcox.test(Distance ~ category, data = df_shuffled)
+    ppermute[i] <- result$p.value
+    print(result$p.value)
+  }
+  
+  final_pvalue <- sum(ppermute <= baseline_pvalue) / n_permutations
+  
+  results[[paste(cohort)]] <- list(
+    baseline_pvalue = baseline_pvalue,
+    final_pvalue = final_pvalue
+  )
+}
+
+# Output the results
+results
+
+# write.table(df_distances_NS_SS, "/scratch/p309176/amg_paper/raw_data/NCP_studies_vir/downstream_R/df_for_figure2d_new.tsv", sep='\t', row.names=F, col.names=T, quote=F)
+#######################################################################################################################################
+
 ## Analysis for the vOTUs sharedness with the other cohorts: correlation between sharedness with own vs different cohort
 #######################################################################################################################################
 RPKM_filtered_w_dummy <- RPKM_count
@@ -990,14 +1170,7 @@ table_for_plot_cor <- table_for_plot_cor %>%
          different_cohort_NC = ifelse(cohort == "maqsood", dummy_non_maqsood_NC, NA),
          different_cohort_NC = ifelse(cohort == "liang", dummy_non_liang_NC, different_cohort_NC),
          different_cohort_NC = ifelse(cohort == "shah", dummy_non_shah_NC, different_cohort_NC),
-         different_cohort_NC = ifelse(cohort == "garmaeva", dummy_non_garmaeva_NC, different_cohort_NC)#,
-         # Timepoint_numeric = as.integer(gsub("M", "", Timepoint)),
-         # Timepoint_numeric = ifelse(grepl("Y2-5", Timepoint), 24, Timepoint_numeric),
-         # Timepoint_numeric = ifelse(Type == "Mother" & Timepoint == "Mtrim3", 0, Timepoint_numeric),
-         # Timepoint_numeric = ifelse(Type == "Mother" & Timepoint == "M0", 3, Timepoint_numeric),
-         # Timepoint_numeric = ifelse(Type == "Mother" & Timepoint == "M1", 4, Timepoint_numeric),
-         # Timepoint_numeric = ifelse(Type == "Mother" & Timepoint == "M2", 5, Timepoint_numeric),
-         # Timepoint_numeric = ifelse(Type == "Mother" & Timepoint == "M3", 6, Timepoint_numeric)
+         different_cohort_NC = ifelse(cohort == "garmaeva", dummy_non_garmaeva_NC, different_cohort_NC)
   )
 
 result_present_in_both$Sample_name <- row.names(result_present_in_both)
@@ -1068,14 +1241,7 @@ table_for_plot_cor_a <- table_for_plot_cor_a %>%
          different_cohort_NC = ifelse(cohort == "maqsood", dummy_non_maqsood_NC, NA),
          different_cohort_NC = ifelse(cohort == "liang", dummy_non_liang_NC, different_cohort_NC),
          different_cohort_NC = ifelse(cohort == "shah", dummy_non_shah_NC, different_cohort_NC),
-         different_cohort_NC = ifelse(cohort == "garmaeva", dummy_non_garmaeva_NC, different_cohort_NC)#,
-         # Timepoint_numeric = as.integer(gsub("M", "", Timepoint)),
-         # Timepoint_numeric = ifelse(grepl("Y2-5", Timepoint), 24, Timepoint_numeric),
-         # Timepoint_numeric = ifelse(Type == "Mother" & Timepoint == "Mtrim3", 0, Timepoint_numeric),
-         # Timepoint_numeric = ifelse(Type == "Mother" & Timepoint == "M0", 3, Timepoint_numeric),
-         # Timepoint_numeric = ifelse(Type == "Mother" & Timepoint == "M1", 4, Timepoint_numeric),
-         # Timepoint_numeric = ifelse(Type == "Mother" & Timepoint == "M2", 5, Timepoint_numeric),
-         # Timepoint_numeric = ifelse(Type == "Mother" & Timepoint == "M3", 6, Timepoint_numeric)
+         different_cohort_NC = ifelse(cohort == "garmaeva", dummy_non_garmaeva_NC, different_cohort_NC)
   )
 
 
@@ -1137,7 +1303,8 @@ table_for_plot_cor_combine_melt <- table_for_plot_cor_combine_melt %>%
 table_for_plot_cor_combine_melt$same_diff <- factor(table_for_plot_cor_combine_melt$same_diff, levels = c("same", "different"))
 table_for_plot_cor_combine_melt$pres_abun <- factor(table_for_plot_cor_combine_melt$pres_abun, levels = c("presence", "abundance"))
 
-write.table(table_for_plot_cor_combine, "/scratch/p309176/amg_paper/raw_data/NCP_studies_vir/downstream_R/df_for_figure2d.tsv", sep='\t', row.names=F, col.names=T, quote=F)
+# write.table(table_for_plot_cor_combine, "/scratch/p309176/amg_paper/raw_data/NCP_studies_vir/downstream_R/df_for_figure2d.tsv", sep='\t', row.names=F, col.names=T, quote=F)
+# write.table(table_for_plot_cor_combine_melt, "/scratch/p309176/amg_paper/raw_data/NCP_studies_vir/downstream_R/df_for_figure9as.tsv", sep='\t', row.names=F, col.names=T, quote=F)
 
 # Permutation analysis
 
@@ -1213,51 +1380,6 @@ table_for_plot_cor_combine_melt_subset_log <- table_for_plot_cor_combine_melt_su
 table_for_plot_cor_combine_melt_subset_log$same_cohort_NC_presence <- table_for_plot_cor_combine_melt_subset_log$same_cohort_NC_presence + (min_nonzero / 2)
 table_for_plot_cor_combine_melt_subset_log$Type <- factor(table_for_plot_cor_combine_melt_subset_log$Type, levels = c("Infant", "Mother"))
 table_for_plot_cor_combine_melt_subset$Type <- factor(table_for_plot_cor_combine_melt_subset$Type, levels = c("Infant", "Mother"))
-#######################################################################################################################################
-
-## Additional analysis: absolute number calculation
-#######################################################################################################################################
-result_present_in_both_mi <- result_present_in_both[result_present_in_both$cohort %in% c("maqsood", "garmaeva"), c("Sample_name", "cohort", "same_cohort_NC")]
-result_present_in_both_mi <- merge(result_present_in_both_mi, meta_working[c("Sample_name", "Type", "Subject_ID", "Timepoint", "nc_subject_group")], by="Sample_name", all.x = T)
-
-summary(lmer(same_cohort_NC ~ Type + (1|nc_subject_group), data=result_present_in_both_mi[result_present_in_both_mi$cohort == "garmaeva", ]))
-summary(lm(same_cohort_NC ~ Type, data=result_present_in_both_mi[result_present_in_both_mi$cohort == "maqsood", ]))
-
-stat.testaaan <- result_present_in_both_mi %>%
-  group_by(cohort) %>%
-  t_test(same_cohort_NC ~ Type) %>%
-  adjust_pvalue(method = "bonferroni") %>%
-  add_significance()
-
-stat.testaaan <- stat.testaaan %>% add_xy_position(x = "same_cohort_NC")
-stat.testaaan$xmin <- 1
-stat.testaaan$xmax <- 2
-stat.testaaan$p.signif <- c("***", "***")
-
-pdf('absolute_count_contaminants_mom_vs_inf.pdf', width=12/2.54, height=12/2.54)
-ggplot(result_present_in_both_mi, aes(x = Type, y = same_cohort_NC)) +
-  geom_jitter(width = 0.3, fill = "#2E236C", size = 1.3, shape = 21, stroke = 0.1, color = "white") +
-  geom_boxplot(fill = "#C8ACD6", alpha=0.3, outlier.alpha = 0) +
-  facet_grid(. ~ cohort, scales = "free", labeller = labeller(
-    cohort = c(
-      "garmaeva" = "Samples Garmaeva *et al.* <br>",
-      "maqsood" = "Samples Maqsood *et al.* <br>"
-    )
-  )) +
-  labs(y = "N vOTUs shared with NCs") +
-  theme_bw() +
-  theme(
-    strip.text = ggtext::element_markdown(size=6),
-    plot.title = element_text(size = 10),
-    axis.title.x = element_text(size = 8),
-    axis.title.y = element_text(size = 8),
-    axis.text.x = element_text(size = 6),
-    axis.text.y = element_text(size = 6),
-    strip.background = element_rect(fill = "transparent"),
-    plot.tag = element_text(face="bold", size=6)
-  ) + 
-  stat_pvalue_manual(stat.testaaan, tip.length = 0.02, size=2.5, label = "p.signif")
-dev.off()
 #######################################################################################################################################
 
 ## Analysis for the vOTUs sharedness along the timepoints: with dummy, only Liang and Garmaeva cohorts, no cross-cohort comparison
@@ -1405,10 +1527,54 @@ combined_table_for_plot$Dataset <- factor(combined_table_for_plot$Dataset, level
 
 #CHECK FOR 0 VALUES FIRST!!!
 min_nonzero <- min(combined_table_for_plot$value[combined_table_for_plot$value > 0])
-combined_table_for_plot_log <- combined_table_for_plot
-combined_table_for_plot_log$value <- combined_table_for_plot_log$value + (min_nonzero / 2)
+# combined_table_for_plot_log <- combined_table_for_plot
+# combined_table_for_plot_log$value <- combined_table_for_plot_log$value + (min_nonzero / 2)
+# 
+write.table(combined_table_for_plot, "/scratch/p309176/amg_paper/raw_data/NCP_studies_vir/downstream_R/df_for_figure3c.tsv", sep='\t', row.names=F, col.names=T, quote=F)
+#######################################################################################################################################
 
-write.table(combined_table_for_plot_log, "/scratch/p309176/amg_paper/raw_data/NCP_studies_vir/downstream_R/df_for_figure2e.tsv", sep='\t', row.names=F, col.names=T, quote=F)
+## Additional analysis: absolute number calculation
+#######################################################################################################################################
+result_present_in_both_mi <- result_present_in_both[result_present_in_both$cohort %in% c("maqsood", "garmaeva"), c("Sample_name", "cohort", "same_cohort_NC")]
+result_present_in_both_mi <- merge(result_present_in_both_mi, meta_working[c("Sample_name", "Type", "Subject_ID", "Timepoint", "nc_subject_group")], by="Sample_name", all.x = T)
+
+summary(lmer(same_cohort_NC ~ Type + (1|nc_subject_group), data=result_present_in_both_mi[result_present_in_both_mi$cohort == "garmaeva", ]))
+summary(lm(same_cohort_NC ~ Type, data=result_present_in_both_mi[result_present_in_both_mi$cohort == "maqsood", ]))
+
+stat.testaaan <- result_present_in_both_mi %>%
+  group_by(cohort) %>%
+  t_test(same_cohort_NC ~ Type) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance()
+
+stat.testaaan <- stat.testaaan %>% add_xy_position(x = "same_cohort_NC")
+stat.testaaan$xmin <- 1
+stat.testaaan$xmax <- 2
+stat.testaaan$p.signif <- c("***", "***")
+
+pdf('absolute_count_contaminants_mom_vs_inf.pdf', width=12/2.54, height=8/2.54)
+ggplot(result_present_in_both_mi, aes(x = Type, y = same_cohort_NC)) +
+  geom_jitter(width = 0.3, fill = "#2E236C", size = 1.3, shape = 21, stroke = 0.1, color = "white") +
+  geom_boxplot(fill = "#C8ACD6", alpha=0.3, outlier.alpha = 0) +
+  facet_grid(. ~ cohort, scales = "free", labeller = labeller(
+    cohort = c(
+      "garmaeva" = "Samples Garmaeva *et al.* <br>",
+      "maqsood" = "Samples Maqsood *et al.* <br>"
+    )
+  )) +
+  labs(y = "N vOTUs shared with NCs") +
+  theme_bw() +
+  theme(
+    strip.text = ggtext::element_markdown(size=8),
+    plot.title = element_text(size = 10),
+    axis.title.x = element_text(size = 10),
+    axis.title.y = element_text(size = 10),
+    axis.text.x = element_text(size = 8),
+    axis.text.y = element_text(size = 8),
+    strip.background = element_rect(fill = "transparent")
+  ) + 
+  stat_pvalue_manual(stat.testaaan, tip.length = 0.02, size=2.5, label = "p.signif")
+dev.off()
 #######################################################################################################################################
 
 ## Strain check
@@ -1698,96 +1864,6 @@ figure_3_supp <- ((figure_3A_supp + figure_3B_supp) / (figure_3C_supp + figure_3
 ggsave("Supplementary_figure3.pdf", figure_3_supp, width = 21/2.54, height = 21/2.54)
 ggsave("Supplementary_figure3.png", figure_3_supp, width = 15.92/2.54, height = 15.92/2.54)
 
-
-figure_4A_supp <- ggplot(table_for_plot_cor_combine_melt, aes(x = same_diff, y = value)) +
-  geom_jitter(width = 0.3, fill = "#2E236C", size = 1.3, shape = 21, stroke = 0.1, color = "white") +
-  geom_boxplot(fill = "#C8ACD6", alpha=0.3, outliers = FALSE) +
-  facet_grid(cohort ~ pres_abun, scales = "free", labeller = labeller(
-    pres_abun = c(
-      "presence" = "% vOTUs shared (presence)",
-      "abundance" = "Abundance of shared vOTUs "
-    ),
-    cohort = c(
-      "garmaeva" = "Samples Garmaeva *et al.* <br>",
-      "liang" = "Samples Liang *et al.* <br>",
-      "maqsood" = "Samples Maqsood *et al.* <br>",
-      "shah" = "Samples Shah *et al.* <br>"
-    )
-  )) +
-  labs(x="Study", y="% vOTUs shared with NCs", tag="a") +
-  theme_bw() +
-  theme(
-    strip.text = ggtext::element_markdown(size=6),
-    plot.title = element_text(size = 10),
-    axis.title.x = element_text(size = 8),
-    axis.title.y = element_text(size = 8),
-    axis.text.x = element_text(size = 8), 
-    axis.text.y = element_text(size = 6),
-    strip.background = element_rect(fill = "transparent"),
-    plot.tag = element_text(face="bold", size=6)
-  )
-
-stat.test4 <- table_for_plot_cor_combine_melt %>%
-  group_by(cohort, pres_abun) %>%
-  t_test(value ~ same_diff) %>%
-  adjust_pvalue(method = "bonferroni") %>%
-  add_significance()
-
-stat.test4 <- stat.test4 %>% 
-  add_xy_position(x = "same_diff", dodge = 0.8)
-
-stat.test4$xmin <- 1
-stat.test4$xmax <- 2
-
-stat.test4$p.signif <- c("****", "****", "ns", "ns", "ns", "ns", "****", "****")
-
-figure_4A_supp <- figure_4A_supp + 
-  stat_pvalue_manual(stat.test4, tip.length = 0.02, size=2.5, label = "p.signif")
-
-figure_4B_supp <- ggplot(table_for_plot_cor_combine_melt_subset, aes(x = Type, y = same_cohort_NC_presence)) +
-  geom_jitter(width = 0.3, fill = "#2E236C", size = 1.3, shape = 21, stroke = 0.1, color = "white") +
-  geom_boxplot(fill = "#C8ACD6", alpha=0.3, outlier.alpha = 0) +
-  # scale_y_log10() +
-  facet_grid(. ~ cohort, scales = "free", labeller = labeller(
-    cohort = c(
-      "garmaeva" = "Samples Garmaeva *et al.* <br>",
-      "maqsood" = "Samples Maqsood *et al.* <br>"
-    )
-  )) +
-  labs(y = "% vOTUs shared with NCs", tag="b") +
-  theme_bw() +
-  theme(
-    strip.text = ggtext::element_markdown(size=6),
-    plot.title = element_text(size = 10),
-    axis.title.x = element_text(size = 8),
-    axis.title.y = element_text(size = 8),
-    axis.text.x = element_text(size = 6),
-    axis.text.y = element_text(size = 6),
-    strip.background = element_rect(fill = "transparent"),
-    plot.tag = element_text(face="bold", size=6)
-  )
-
-stat.test5 <- table_for_plot_cor_combine_melt_subset %>%
-  group_by(cohort) %>%
-  t_test(same_cohort_NC_presence ~ Type) %>%
-  adjust_pvalue(method = "bonferroni") %>%
-  add_significance()
-
-stat.test5 <- stat.test5 %>% add_xy_position(x = "same_cohort_NC_presence")
-# stat.test5$y.position <- log10(stat.test5$y.position)
-
-stat.test5$xmin <- 1
-stat.test5$xmax <- 2
-
-stat.test5$p.signif <- c("****", "****")
-figure_4B_supp <- figure_4B_supp + stat_pvalue_manual(stat.test5, tip.length = 0.02, size=2.5, label = "p.signif")
-
-figure_4_supp <- figure_4A_supp | figure_4B_supp + 
-  plot_layout( 
-    heights = c(1, 0.6))
-
-ggsave("Supplementary_figure4_revision.pdf", figure_4_supp, width = 21/2.54, height = 21/2.54)
-ggsave("Supplementary_figure4_revision.png", figure_4_supp, width = 15.92/2.54, height = 15.92/2.54)
 #######################################################################################################################################
 
 ## Additional analysis: Venn diagram
@@ -1861,49 +1937,107 @@ result_diff_ab_l <- result_diff_ab[result_diff_ab$vOTU %in% vOTUs_interest_liang
 result_diff_ab_m <- result_diff_ab[result_diff_ab$vOTU %in% vOTUs_interest_maqsood, c("vOTU", "rowsumssamples_m", "rowsumsnc_m")]
 result_diff_ab_s <- result_diff_ab[result_diff_ab$vOTU %in% vOTUs_interest_shah, c("vOTU", "rowsumssamples_s", "rowsumsnc_s")]
 
-RPKM_temp <- RPKM
-RPKM_temp$vOTU <- row.names(RPKM_temp)
-RPKM_melt <- melt(RPKM_temp, id.vars="vOTU")
-RPKM_temp <- NULL
-RPKM_melt <- RPKM_melt[RPKM_melt$value > 0, ]
-colnames(RPKM_melt)[colnames(RPKM_melt) == "variable"] <- "Sample_name"
-RPKM_melt <- merge(RPKM_melt, meta_working[c("Sample_name", "ncvssample", "cohort")], by="Sample_name", all.x=T)
-RPKM_melt$ncvssample <- as.factor(RPKM_melt$ncvssample)
+RPKM_INT$Sample_name <- row.names(RPKM_INT)
+row.names(RPKM_INT) <- NULL
+RPKM_INT <-  merge(RPKM_INT, meta_working[c("Sample_name", "ncvssample", "cohort", "nc_subject_group")], by="Sample_name", all.x=T)
+RPKM_INT$ncvssample <- factor(RPKM_INT$ncvssample, levels = c("SAMPLES", "NCs"))
+RPKM_INT <- RPKM_INT[, colnames(RPKM_INT) %in% result_diff_ab_m$vOTU | colnames(RPKM_INT) %in% result_diff_ab_l$vOTU |
+                            colnames(RPKM_INT) %in% result_diff_ab_s$vOTU | colnames(RPKM_INT) %in% c("Sample_name", "ncvssample", "cohort", "nc_subject_group")]
 
-wilcox.test(value ~ ncvssample, data=RPKM_melt[RPKM_melt$vOTU == "maqsood_C0132iv_N38_L10939_K9.5_E0_P0_F0" & RPKM_melt$cohort == "maqsood", ])$p.value
+
+wilcox.test(value ~ ncvssample, data=RPKM_INT[RPKM_INT$vOTU == "maqsood_C0132iv_N38_L10939_K9.5_E0_P0_F0" & RPKM_INT$cohort == "maqsood", ])$p.value
+summary(lmer(garmaeva_LN_4E07_VL_260_N107_L4930_K24.8_E1_P0_F0 ~ ncvssample + (1|nc_subject_group), REML = F, data = RPKM_INT[RPKM_INT$cohort == "liang" , ]))
+coef(summary(lmer(liang_SRR8653029_N31_L12224_K2.6_E0_P0_F0 ~ ncvssample + (1|nc_subject_group), REML = F, data = RPKM_INT[RPKM_INT$cohort == "maqsood" , ])))["ncvssampleNCs", "Pr(>|t|)"]
+
 
 result_diff_ab_m$pval <- sapply(result_diff_ab_m$vOTU, function(current_vOTU) {
-  subset_data <- RPKM_melt[RPKM_melt$vOTU == current_vOTU & RPKM_melt$cohort == "maqsood", ]
+  subset_data <- RPKM_INT[RPKM_INT$cohort == "maqsood", ]
   if (nrow(subset_data) > 1) {
-    test_result <- wilcox.test(value ~ ncvssample, data = subset_data)
-    return(test_result$p.value)
+    formula <- as.formula(paste(current_vOTU, "~ ncvssample + (1|nc_subject_group)"))
+    model <- lmer(formula, REML = FALSE, data = subset_data)
+    p_value <- coef(summary(model))["ncvssampleNCs", "Pr(>|t|)"]
+    return(p_value)
   } else {
     return(NA) # Return NA if there's not enough data
   }
 })
 
+
 result_diff_ab_l$pval <- sapply(result_diff_ab_l$vOTU, function(current_vOTU) {
-  subset_data <- RPKM_melt[RPKM_melt$vOTU == current_vOTU & RPKM_melt$cohort == "liang", ]
+  subset_data <- RPKM_INT[RPKM_INT$cohort == "liang", ]
   if (nrow(subset_data) > 1) {
-    test_result <- wilcox.test(value ~ ncvssample, data = subset_data)
-    return(test_result$p.value)
+    formula <- as.formula(paste(current_vOTU, "~ ncvssample + (1|nc_subject_group)"))
+    model <- lmer(formula, REML = FALSE, data = subset_data)
+    p_value <- coef(summary(model))["ncvssampleNCs", "Pr(>|t|)"]
+    return(p_value)
   } else {
     return(NA) # Return NA if there's not enough data
   }
 })
 
 result_diff_ab_s$pval <- sapply(result_diff_ab_s$vOTU, function(current_vOTU) {
-  subset_data <- RPKM_melt[RPKM_melt$vOTU == current_vOTU & RPKM_melt$cohort == "shah", ]
+  subset_data <- RPKM_INT[RPKM_INT$cohort == "shah", ]
   if (nrow(subset_data) > 1) {
-    test_result <- wilcox.test(value ~ ncvssample, data = subset_data)
-    return(test_result$p.value)
+    formula <- as.formula(paste(current_vOTU, "~ ncvssample + (1|nc_subject_group)"))
+    model <- lmer(formula, REML = FALSE, data = subset_data)
+    p_value <- coef(summary(model))["ncvssampleNCs", "Pr(>|t|)"]
+    return(p_value)
   } else {
-    return(NA)
+    return(NA) # Return NA if there's not enough data
   }
 })
 
-# Do outlier test
-# Do heatmap
+
+RPKM_t <- as.data.frame(t(RPKM))
+RPKM_t <- RPKM_t[, colnames(RPKM_t) %in% result_diff_ab_m$vOTU | colnames(RPKM_t) %in% result_diff_ab_l$vOTU |
+                   colnames(RPKM_t) %in% result_diff_ab_s$vOTU]
+min_nonzero <- min(RPKM_t[RPKM_t > 0], na.rm = TRUE)
+RPKM_t$Sample_name <- row.names(RPKM_t)
+row.names(RPKM_t) <- NULL
+RPKM_t <-  merge(RPKM_t, meta_working[c("Sample_name", "ncvssample", "cohort", "nc_subject_group")], by="Sample_name", all.x=T)
+RPKM_t$ncvssample <- factor(RPKM_t$ncvssample, levels = c("SAMPLES", "NCs"))
+
+
+
+result_diff_ab_m$log2fold_change <- sapply(result_diff_ab_m$vOTU, function(current_vOTU) {
+  subset_data <- RPKM_t[RPKM_t$cohort == "maqsood", ]
+  if (nrow(subset_data) > 1) {
+    values_NCs <- subset_data[[current_vOTU]][subset_data$ncvssample == "NCs"]
+    values_SAMPLES <- subset_data[[current_vOTU]][subset_data$ncvssample == "SAMPLES"]
+    test_result <- log2(mean(values_NCs)/mean(values_SAMPLES))
+    return(test_result)
+  } else {
+    return(NA) # Return NA if there's not enough data
+  }
+})
+
+result_diff_ab_l$log2fold_change <- sapply(result_diff_ab_l$vOTU, function(current_vOTU) {
+  subset_data <- RPKM_t[RPKM_t$cohort == "liang", ]
+  if (nrow(subset_data) > 1) {
+    values_NCs <- subset_data[[current_vOTU]][subset_data$ncvssample == "NCs"]
+    values_SAMPLES <- subset_data[[current_vOTU]][subset_data$ncvssample == "SAMPLES"]
+    test_result <- log2(mean(values_NCs)/mean(values_SAMPLES))
+    return(test_result)
+  } else {
+    return(NA) # Return NA if there's not enough data
+  }
+})
+
+result_diff_ab_s$log2fold_change <- sapply(result_diff_ab_s$vOTU, function(current_vOTU) {
+  subset_data <- RPKM_t[RPKM_t$cohort == "shah", ]
+  if (nrow(subset_data) > 1) {
+    values_NCs <- subset_data[[current_vOTU]][subset_data$ncvssample == "NCs"]
+    values_SAMPLES <- subset_data[[current_vOTU]][subset_data$ncvssample == "SAMPLES"]
+    test_result <- log2(mean(values_NCs)/mean(values_SAMPLES))
+    return(test_result)
+  } else {
+    return(NA) # Return NA if there's not enough data
+  }
+})
+
+write.table(result_diff_ab_m, "../result_diff_ab_m_upd.tsv", sep='\t', row.names=F, col.names=T, quote=F)
+write.table(result_diff_ab_l, "../result_diff_ab_l_upd.tsv", sep='\t', row.names=F, col.names=T, quote=F)
+write.table(result_diff_ab_s, "../result_diff_ab_s_upd.tsv", sep='\t', row.names=F, col.names=T, quote=F)
 
 #######################################################################################################################################
 
@@ -1939,177 +2073,123 @@ for (i in shared_list$SAMPLE) {
 strains_vOTU_shared$presence_strain_shared_perc <- (strains_vOTU_shared$N_strain_shared / strains_vOTU_shared$total_presence)*100
 strains_vOTU_shared$abundance_strain_shared_perc <- (strains_vOTU_shared$abundance_strain_shared / strains_vOTU_shared$total_abundance)*100
 
+# Strain sharedness to different cohorts
 
-# for abundance correlation
-spearman_result_garmaeva <- psych::corr.test(strains_vOTU_shared[strains_vOTU_shared$cohort == "garmaeva", c("same_cohort_NC_abundance", "abundance_strain_shared_perc")], method = "spearman")
-print(spearman_result_garmaeva$r)  # 0.5122355
-print(spearman_result_garmaeva$p)  # 4.141206e-15
+strains_df_diff <- strains_df_ini[!is.na(strains_df_ini$popANI), ]
+strains_df_diff$name1 <- gsub("_filtered.sorted.bam", "", strains_df_diff$name1)
+strains_df_diff$name2 <- gsub("_filtered.sorted.bam", "", strains_df_diff$name2)
+colnames(strains_df_diff)[colnames(strains_df_diff) %in% c("name1", "name2")] <- c("Sample1", "Sample2")
+strains_df_diff <- merge(strains_df_diff, meta_working[c("Sample1", "ncvssample", "cohort")], by="Sample1", all.x=T)
+strains_df_diff <- merge(strains_df_diff, meta_working[c("Sample2", "ncvssample", "cohort")], by="Sample2", all.x=T, suffixes=c("_sample1", "_sample2"))
+strains_df_diff <- strains_df_diff[strains_df_diff$cohort_sample1 != strains_df_diff$cohort_sample2 &
+                                     strains_df_diff$ncvssample_sample1 != strains_df_diff$ncvssample_sample2, ]
 
-spearman_result_maqsood <- psych::corr.test(strains_vOTU_shared[strains_vOTU_shared$cohort == "maqsood", c("same_cohort_NC_abundance", "abundance_strain_shared_perc")], method = "spearman")
-print(spearman_result_maqsood$r)  # 0.9124568  
-print(spearman_result_maqsood$p)  # 3.189383e-31
+strains_df_diff <- strains_df_diff %>%
+  mutate(SAMPLE = ifelse(ncvssample_sample1 == "SAMPLES", Sample1, Sample2),
+         NC = ifelse(ncvssample_sample1 == "NCs", Sample1, Sample2),
+         cohort_sample = ifelse(ncvssample_sample1 == "SAMPLES", as.character(cohort_sample1), as.character(cohort_sample2)))
 
-spearman_result_liang <- psych::corr.test(strains_vOTU_shared[strains_vOTU_shared$cohort == "liang", c("same_cohort_NC_abundance", "abundance_strain_shared_perc")], method = "spearman")
-print(spearman_result_liang$r)  # 0.9485843
-print(spearman_result_liang$p)  # 6.332882e-163
+strains_df_popani_99999_diff <- strains_df_diff[strains_df_diff$popANI > 0.99999, ]
+shared_list_diff <- unique(strains_df_popani_99999_diff[c("SAMPLE", "scaffold")])
+presence_strain_diff <- as.data.frame(table(shared_list_diff$SAMPLE))
+colnames(presence_strain_diff) <- c("Sample_name", "N_strain_shared_diff_study")
 
-spearman_result_shah <- psych::corr.test(strains_vOTU_shared[strains_vOTU_shared$cohort == "shah", c("same_cohort_NC_abundance", "abundance_strain_shared_perc")], method = "spearman")
-print(spearman_result_shah$r)  # 0.9128764
-print(spearman_result_shah$p)  # 3.752307e-253
+strains_vOTU_shared <- merge(strains_vOTU_shared, presence_strain_diff, by="Sample_name", all.x=T)
+strains_vOTU_shared$N_strain_shared_diff_study[is.na(strains_vOTU_shared$N_strain_shared_diff_study)] <- 0
+strains_vOTU_shared$presence_strain_shared_perc_diff_study <- (strains_vOTU_shared$N_strain_shared_diff_study / strains_vOTU_shared$total_presence)*100
 
-# for presence correlation
-spearman_result_garmaeva <- psych::corr.test(strains_vOTU_shared[strains_vOTU_shared$cohort == "garmaeva", c("presence_strain_shared_perc", "same_cohort_NC_presence")], method = "spearman")
-print(spearman_result_garmaeva$r)  # 0.7563536
-print(spearman_result_garmaeva$p)  # 2.828837e-39
+# for plot correlation
 
-spearman_result_maqsood <- psych::corr.test(strains_vOTU_shared[strains_vOTU_shared$cohort == "maqsood", c("presence_strain_shared_perc", "same_cohort_NC_presence")], method = "spearman")
-print(spearman_result_maqsood$r)  # 0.894728
-print(spearman_result_maqsood$p)  # 2.521741e-28
+spearman_result_4a <- psych::corr.test(strains_vOTU_shared[c("presence_strain_shared_perc", "presence_strain_shared_perc_diff_study")], method = "spearman")
+print(spearman_result_4a$r)  # 0.3677397
+print(spearman_result_4a$p)  # 1.92456e-41
 
-spearman_result_liang <- psych::corr.test(strains_vOTU_shared[strains_vOTU_shared$cohort == "liang", c("presence_strain_shared_perc", "same_cohort_NC_presence")], method = "spearman")
-print(spearman_result_liang$r)  # 0.9479956
-print(spearman_result_liang$p)  # 3.773735e-162
+spearman_result_garmaeva_4b <- psych::corr.test(strains_vOTU_shared[strains_vOTU_shared$cohort == "garmaeva", c("presence_strain_shared_perc", "different_cohort_NC_presence")], method = "spearman")
+print(spearman_result_garmaeva_4b$r)
+print(spearman_result_garmaeva_4b$p)
 
-spearman_result_shah <- psych::corr.test(strains_vOTU_shared[strains_vOTU_shared$cohort == "shah", c("presence_strain_shared_perc", "same_cohort_NC_presence")], method = "spearman")
-print(spearman_result_shah$r)  # 0.8280167
-print(spearman_result_shah$p)  # 3.247665e-164
+spearman_result_maqsood_4b <- psych::corr.test(strains_vOTU_shared[strains_vOTU_shared$cohort == "maqsood", c("presence_strain_shared_perc", "different_cohort_NC_presence")], method = "spearman")
+print(spearman_result_maqsood_4b$r)
+print(spearman_result_maqsood_4b$p)
 
-correlations_presence <- strains_vOTU_shared %>%
-  group_by(cohort) %>%
-  summarize(cor = cor(presence_strain_shared_perc, same_cohort_NC_presence, method = "spearman"))
+spearman_result_liang_4b <- psych::corr.test(strains_vOTU_shared[strains_vOTU_shared$cohort == "liang", c("presence_strain_shared_perc", "different_cohort_NC_presence")], method = "spearman")
+print(spearman_result_liang_4b$r)
+print(spearman_result_liang_4b$p)
 
-correlations_abundance <- strains_vOTU_shared %>%
-  group_by(cohort) %>%
-  summarize(cor = cor(same_cohort_NC_abundance, abundance_strain_shared_perc, method = "spearman"))
+spearman_result_shah_4b <- psych::corr.test(strains_vOTU_shared[strains_vOTU_shared$cohort == "shah", c("presence_strain_shared_perc", "different_cohort_NC_presence")], method = "spearman")
+print(spearman_result_shah_4b$r)
+print(spearman_result_shah_4b$p)
 
 correlations_presence_strain_vs_diffvotu <- strains_vOTU_shared %>%
   group_by(cohort) %>%
   summarize(cor = cor(presence_strain_shared_perc, different_cohort_NC_presence, method = "spearman"))
 
-correlations_abundance_strain_vs_diffvotu <- strains_vOTU_shared %>%
-  group_by(cohort) %>%
-  summarize(cor = cor(abundance_strain_shared_perc, different_cohort_NC_abundance, method = "spearman"))
-
-pdf('vOTU_vs_strain_sharedness_cor.pdf', width=12/2.54, height=12/2.54)
-ggplot(strains_vOTU_shared, aes(x=same_cohort_NC_presence, y=presence_strain_shared_perc)) +
-  geom_point(size = 0.7, color="#2E236C", alpha=0.75) +  # Adjusted point size and added transparency
-  geom_smooth(method="lm", color="#2E236C", fill="#C8ACD6", se=TRUE, linewidth=0.5) +  # Use linewidth instead of size
-  facet_wrap(~ cohort, nrow = 2, ncol = 2, scales = "free", labeller = labeller(
-    cohort = c(
-      "garmaeva" = "Samples Garmaeva *et al.* <br>",
-      "liang" = "Samples Liang *et al.* <br>",
-      "maqsood" = "Samples Maqsood *et al.* <br>",
-      "shah" = "Samples Shah *et al.* <br>"
-    )
-  )) +
-  labs(x = "% shared vOTUs with NCs from same study", y = "% shared strains with NCs from same study", tag="d") +
-  theme_bw() +
-  theme(
-    strip.text = ggtext::element_markdown(size=7),
-    #plot.title = element_text(size = 10),
-    axis.title.x = element_text(size = 8),
-    axis.title.y = element_text(size = 8),
-    axis.text.x = element_text(size = 7),
-    axis.text.y = element_text(size = 7),
-    strip.background = element_rect(fill = "transparent"),
-    plot.tag = ggtext::element_markdown(face = "bold")
-  ) +
-  # Add Spearman correlation values as text on the facets
-  geom_text(data = correlations_presence, aes(x = Inf, y = Inf, label = paste("rho = ", round(cor, 2))),
-            hjust = 1.1, vjust = 1.5, size = 3)
-dev.off()
-
-
-pdf('abundance_vOTU_vs_strain_sharedness_cor.pdf', width=12/2.54, height=12/2.54)
-ggplot(strains_vOTU_shared, aes(x=same_cohort_NC_abundance, y=abundance_strain_shared_perc)) +
-  geom_point(size = 0.7, color="#2E236C", alpha=0.75) +  # Adjusted point size and added transparency
-  geom_smooth(method="lm", color="#2E236C", fill="#C8ACD6", se=TRUE, linewidth=0.5) +  # Use linewidth instead of size
-  facet_wrap(~ cohort, nrow = 2, ncol = 2, scales = "free", labeller = labeller(
-    cohort = c(
-      "garmaeva" = "Samples Garmaeva *et al.* <br>",
-      "liang" = "Samples Liang *et al.* <br>",
-      "maqsood" = "Samples Maqsood *et al.* <br>",
-      "shah" = "Samples Shah *et al.* <br>"
-    )
-  )) +
-  labs(x = "% abundance shared vOTUs with NCs from same study", y = "% abundance shared strains with NCs from same study", tag="d") +
-  theme_bw() +
-  theme(
-    strip.text = ggtext::element_markdown(size=7),
-    #plot.title = element_text(size = 10),
-    axis.title.x = element_text(size = 8),
-    axis.title.y = element_text(size = 8),
-    axis.text.x = element_text(size = 7),
-    axis.text.y = element_text(size = 7),
-    strip.background = element_rect(fill = "transparent"),
-    plot.tag = ggtext::element_markdown(face = "bold")
-  ) +
-# Add Spearman correlation values as text on the facets
-  geom_text(data = correlations_abundance, aes(x = Inf, y = Inf, label = paste("rho = ", round(cor, 2))),
-            hjust = 1.1, vjust = 1.5, size = 3)
-dev.off()
-
-pdf('presence_diff_vOTU_vs_strain_sharedness_cor.pdf', width=12/2.54, height=12/2.54)
-ggplot(strains_vOTU_shared, aes(x=presence_strain_shared_perc, y=different_cohort_NC_presence)) +
-  geom_point(size = 0.7, color="#2E236C", alpha=0.75) +  # Adjusted point size and added transparency
-  geom_smooth(method="lm", color="#2E236C", fill="#C8ACD6", se=TRUE, linewidth=0.5) +  # Use linewidth instead of size
-  facet_wrap(~ cohort, nrow = 2, ncol = 2, scales = "free", labeller = labeller(
-    cohort = c(
-      "garmaeva" = "Samples Garmaeva *et al.* <br>",
-      "liang" = "Samples Liang *et al.* <br>",
-      "maqsood" = "Samples Maqsood *et al.* <br>",
-      "shah" = "Samples Shah *et al.* <br>"
-    )
-  )) +
-  labs(x = "% shared strains with NCs from same study", y = "% shared vOTUs with NCs from different study", tag="d") +
-  theme_bw() +
-  theme(
-    strip.text = ggtext::element_markdown(size=7),
-    #plot.title = element_text(size = 10),
-    axis.title.x = element_text(size = 8),
-    axis.title.y = element_text(size = 8),
-    axis.text.x = element_text(size = 7),
-    axis.text.y = element_text(size = 7),
-    strip.background = element_rect(fill = "transparent"),
-    plot.tag = ggtext::element_markdown(face = "bold")
-  ) +
-  # Add Spearman correlation values as text on the facets
-  geom_text(data = correlations_presence_strain_vs_diffvotu, aes(x = Inf, y = Inf, label = paste("rho = ", round(cor, 2))),
-            hjust = 1.1, vjust = 1.5, size = 3)
-dev.off()
-
-pdf('abundance_diff_vOTU_vs_strain_sharedness_cor.pdf', width=12/2.54, height=12/2.54)
-ggplot(strains_vOTU_shared, aes(x=abundance_strain_shared_perc, y=different_cohort_NC_abundance)) +
-  geom_point(size = 0.7, color="#2E236C", alpha=0.75) +  # Adjusted point size and added transparency
-  geom_smooth(method="lm", color="#2E236C", fill="#C8ACD6", se=TRUE, linewidth=0.5) +  # Use linewidth instead of size
-  facet_wrap(~ cohort, nrow = 2, ncol = 2, scales = "free", labeller = labeller(
-    cohort = c(
-      "garmaeva" = "Samples Garmaeva *et al.* <br>",
-      "liang" = "Samples Liang *et al.* <br>",
-      "maqsood" = "Samples Maqsood *et al.* <br>",
-      "shah" = "Samples Shah *et al.* <br>"
-    )
-  )) +
-  labs(x = "% abundance shared strains with NCs from same study", y = "% abundance shared vOTUs with NCs from different study", tag="d") +
-  theme_bw() +
-  theme(
-    strip.text = ggtext::element_markdown(size=7),
-    #plot.title = element_text(size = 10),
-    axis.title.x = element_text(size = 8),
-    axis.title.y = element_text(size = 8),
-    axis.text.x = element_text(size = 7),
-    axis.text.y = element_text(size = 7),
-    strip.background = element_rect(fill = "transparent"),
-    plot.tag = ggtext::element_markdown(face = "bold")
-  ) +
-  # Add Spearman correlation values as text on the facets
-  geom_text(data = correlations_abundance_strain_vs_diffvotu, aes(x = Inf, y = Inf, label = paste("rho = ", round(cor, 2))),
-            hjust = 1.1, vjust = 1.5, size = 3)
-dev.off()
-
+correlations_presence_strain_vs_diffstrain <- strains_vOTU_shared %>%
+  summarize(cor = cor(presence_strain_shared_perc, presence_strain_shared_perc_diff_study, method = "spearman"))
 #######################################################################################################################################
 
+## Figure 4
+#######################################################################################################################################
 
+Figure4a <- ggplot(strains_vOTU_shared, aes(x=presence_strain_shared_perc, y=presence_strain_shared_perc_diff_study)) +
+  geom_point(size = 0.7, color="#2E236C", alpha=0.75) +  # Adjusted point size and added transparency
+  geom_smooth(method="lm", color="#2E236C", fill="#C8ACD6", se=TRUE, linewidth=0.5) +  # Use linewidth instead of size
+  labs(x = "% shared strains with NCs from same study", y = "% shared strains with NCs from different studies", tag="a") +
+  theme_bw() +
+  theme(
+    axis.title.x = element_text(size = 8),
+    axis.title.y = element_text(size = 8),
+    axis.text.x = element_text(size = 7),
+    axis.text.y = element_text(size = 7),
+    strip.background = element_rect(fill = "transparent"),
+    plot.tag = ggtext::element_markdown(face = "bold")
+  ) +
+  geom_text(data = correlations_presence_strain_vs_diffstrain, aes(x = Inf, y = Inf, label = paste("rho = ", round(cor, 2))),
+            hjust = 1.1, vjust = 1.5, size = 3)
+
+
+Figure4b <- ggplot(strains_vOTU_shared, aes(x=presence_strain_shared_perc, y=different_cohort_NC_presence)) +
+  geom_point(size = 0.7, color="#2E236C", alpha=0.75) +  # Adjusted point size and added transparency
+  geom_smooth(method="lm", color="#2E236C", fill="#C8ACD6", se=TRUE, linewidth=0.5) +  # Use linewidth instead of size
+  facet_wrap(~ cohort, nrow = 2, ncol = 2, scales = "free", labeller = labeller(
+    cohort = c(
+      "garmaeva" = "Samples Garmaeva *et al.* <br>",
+      "liang" = "Samples Liang *et al.* <br>",
+      "maqsood" = "Samples Maqsood *et al.* <br>",
+      "shah" = "Samples Shah *et al.* <br>"
+    )
+  )) +
+  labs(x = "% shared strains with NCs from same study", y = "% shared vOTUs with NCs from different studies", tag="b") +
+  theme_bw() +
+  theme(
+    strip.text = ggtext::element_markdown(size=7),
+    axis.title.x = element_text(size = 8),
+    axis.title.y = element_text(size = 8),
+    axis.text.x = element_text(size = 7),
+    axis.text.y = element_text(size = 7),
+    strip.background = element_rect(fill = "transparent"),
+    plot.tag = ggtext::element_markdown(face = "bold")
+  ) +
+  geom_text(data = correlations_presence_strain_vs_diffvotu, aes(x = Inf, y = Inf, label = paste("rho = ", round(cor, 2))),
+            hjust = 1.1, vjust = 1.5, size = 3)
+
+Figure4 <- Figure4a + Figure4b
+
+ggsave("Figure4.pdf", Figure4, width = 21/2.54, height = 12/2.54)
+#######################################################################################################################################
+
+## Part of the figure 3d & saving the df for the figure 3abe
+#######################################################################################################################################
+
+summary(lmer(N_strain_shared ~ Type + (1|nc_subject_group), data=strains_vOTU_shared[strains_vOTU_shared$cohort == "garmaeva", ]))
+summary(lm(N_strain_shared ~ Type, data=strains_vOTU_shared[strains_vOTU_shared$cohort == "maqsood", ]))
+
+
+df_figure3abe <- merge(strains_vOTU_shared[strains_vOTU_shared$cohort %in% c("garmaeva", "maqsood"), c("Sample_name", "Type", "cohort", "same_cohort_NC_presence", "N_strain_shared")],
+                       result_present_in_both_mi[c("Sample_name", "same_cohort_NC")], by="Sample_name")
+
+write.table(df_figure3abe, "/scratch/p309176/amg_paper/raw_data/NCP_studies_vir/downstream_R/df_figure3abe.tsv", sep='\t', row.names=F, col.names=T, quote=F)
+#######################################################################################################################################
 
 ## Metadata tuning for public repository
 #######################################################################################################################################
@@ -2118,7 +2198,8 @@ meta_all_with_qc_curated <- merge(meta_all_with_qc_curated, table_for_plot_cor_c
 
 meta_all_with_qc_curated <- merge(meta_all_with_qc_curated, result_present_in_both[c("Sample_name", "same_cohort_NC", "different_cohort_NC")], by="Sample_name", all.x = T)
 
-meta_all_with_qc_curated <- merge(meta_all_with_qc_curated, strains_vOTU_shared[c("Sample_name", "presence_strain_shared_perc", "abundance_strain_shared_perc")], by="Sample_name", all.x = T)
+meta_all_with_qc_curated <- merge(meta_all_with_qc_curated, strains_vOTU_shared[c("Sample_name", "presence_strain_shared_perc", "abundance_strain_shared_perc", 
+                                                                                  "N_strain_shared", "N_strain_shared_diff_study", "presence_strain_shared_perc_diff_study")], by="Sample_name", all.x = T)
 
 meta_all_with_qc_curated_clean <- meta_all_with_qc_curated %>%
   mutate(in_reads_se = NULL,
@@ -2148,16 +2229,27 @@ meta_all_with_qc_curated_clean <- meta_all_with_qc_curated %>%
          N_shared_own_NC = same_cohort_NC,
          N_shared_other_NC = different_cohort_NC,
          rna_dna_liang = rna_dna,
-         timepoint_custom_category = timepoint_type)
+         timepoint_custom_category = timepoint_type,       
+         perc_abundance_shared_own_NC = same_cohort_NC_abundance,
+         perc_abundance_shared_other_NC = different_cohort_NC_abundance,
+         N_strains_shared_own_NC = N_strain_shared,
+         N_strains_shared_other_NC = N_strain_shared_diff_study,
+         perc_strains_shared_own_NC = presence_strain_shared_perc,
+         perc_strains_shared_other_NC = presence_strain_shared_perc_diff_study,
+         perc_abundance_strains_shared_own_NC = abundance_strain_shared_perc)
 
 meta_all_with_qc_curated_clean <- meta_all_with_qc_curated_clean[c("Sample_name", "Subject_ID", "FAM_ID", "Type", "status", "Timepoint", "timepoint_custom_category",
                                                                    "Study", "input_files", "in_reads_comb", "clean_reads_comb", "dedup_efficiency", "contigs_total",
                                                                    "contigs_1000", "N50", "total_viruses_discovered", "perc_reads_mapped_to_all_contigs",
                                                                    "clean_reads_mapped_to_vOTUs", "richness", "diversity", "N_shared_own_NC", "N_shared_other_NC",
-                                                                   "perc_shared_own_NC", "perc_shared_other_NC", "rna_dna_liang", "incl_longitudinal", 
-                                                                   "same_cohort_NC_abundance", "different_cohort_NC_abundance", "presence_strain_shared_perc", 
-                                                                   "abundance_strain_shared_perc", "Timepoint_numeric")]
+                                                                   "perc_shared_own_NC", "perc_shared_other_NC", "perc_abundance_shared_own_NC", "perc_abundance_shared_other_NC",
+                                                                   "N_strains_shared_own_NC", "N_strains_shared_other_NC", "perc_strains_shared_own_NC", 
+                                                                   "perc_strains_shared_other_NC", "perc_abundance_strains_shared_own_NC", "rna_dna_liang", 
+                                                                   "incl_longitudinal")]
 
-write.table(meta_all_with_qc_curated_clean, "/scratch/hb-llnext/VLP_public_data/nc_project/for_upload/Sample_metadata.tsv", sep='\t', row.names=F, col.names=T, quote=F)
+
+
+
+write.table(meta_all_with_qc_curated_clean, "/scratch/hb-llnext/VLP_public_data/nc_project/for_upload/Sample_metadata_v2.tsv", sep='\t', row.names=F, col.names=T, quote=F)
 write.table(meta_all_with_qc_curated_clean, "/scratch/hb-llnext/VLP_public_data/nc_project/Sample_metadata_upd.tsv", sep='\t', row.names=F, col.names=T, quote=F)
 #######################################################################################################################################
