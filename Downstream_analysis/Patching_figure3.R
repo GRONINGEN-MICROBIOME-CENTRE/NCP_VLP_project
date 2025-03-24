@@ -166,8 +166,6 @@ sum(infant_metadata$shared_st_iNC_perc >= 10, na.rm = T)
 
 dim(infant_metadata) # => 12%
 
-### <debugged till here>
-
 infant_metadata$study_br <- dplyr::recode(infant_metadata$Study,
                                           'garmaeva' = 'Garmaeva *et al*., 2024',
                                           'liang' = 'Liang *et al*., 2020',
@@ -206,7 +204,6 @@ category_counts_ab <- infant_metadata %>%
 #sum(infant_metadata$perc_st_iNC_ab >=10)/1108 # 11%
 
 # Plotting the stacked bar plot
-
 Figure_3d <- ggplot(category_counts, aes(x = study_br, y = Proportion, fill = Contamination_Category)) +
   geom_bar(stat = "identity") +
   labs(title = "Contaminant-attributed\nrichness across studies",
