@@ -266,33 +266,38 @@ fraction_per_sample <- function(row) {
 summarized_df2_frac <- as.data.frame(t(apply(summarized_df2, 1, fraction_per_sample)))
 
 summarized_df2_frac$Sample_name <- row.names(summarized_df2_frac)
-summarized_df2_frac <- merge(summarized_df2_frac, meta_working[, colnames(meta_working) %in% c("Sample_name", "ncvssample", "cohort", "nc_subject_group")], all.x = T, by="Sample_name")
 
-summarized_df2_frac_stats <- melt(summarized_df2_frac, id.vars = c("Sample_name", "ncvssample", "cohort", "nc_subject_group"))
+meta_working$rna_dna[is.na(meta_working$rna_dna)] <- "DNA"
+meta_working$rna_dna <- factor(meta_working$rna_dna, ordered = FALSE)
+
+summarized_df2_frac <- merge(summarized_df2_frac, meta_working[, colnames(meta_working) %in% c("Sample_name", "ncvssample", "cohort", "nc_subject_group", "rna_dna")], all.x = T, by="Sample_name")
+
+summarized_df2_frac_stats <- melt(summarized_df2_frac, id.vars = c("Sample_name", "ncvssample", "cohort", "nc_subject_group", "rna_dna"))
 
 summarized_df2_frac_stats$value_log_trnsfrmd <- summarized_df2_frac_stats$value + (min(summarized_df2_frac_stats$value[summarized_df2_frac_stats$value > 0])/2)
 summarized_df2_frac_stats$value_log_trnsfrmd <- log(summarized_df2_frac_stats$value_log_trnsfrmd)
 summarized_df2_frac_stats$ncvssample <- factor(summarized_df2_frac_stats$ncvssample, levels = c("SAMPLES", "NCs"))
 
-summary(lmer(value_log_trnsfrmd ~ ncvssample + (1|cohort/nc_subject_group), REML = F, data = summarized_df2_frac_stats[summarized_df2_frac_stats$cohort %in% c("liang", "shah") & summarized_df2_frac_stats$variable == "RNA", ]))
-summary(lmer(value_log_trnsfrmd ~ ncvssample + (1|cohort/nc_subject_group), REML = F, data = summarized_df2_frac_stats[summarized_df2_frac_stats$variable == "dsDNA", ]))
-summary(lmer(value_log_trnsfrmd ~ ncvssample + (1|cohort/nc_subject_group), REML = F, data = summarized_df2_frac_stats[summarized_df2_frac_stats$variable == "ssDNA", ]))
+summary(lmer(value_log_trnsfrmd ~ ncvssample + rna_dna + (1|cohort/nc_subject_group), REML = F, data = summarized_df2_frac_stats[summarized_df2_frac_stats$cohort %in% c("liang", "shah") & summarized_df2_frac_stats$variable == "RNA", ]))
+summary(lmer(value_log_trnsfrmd ~ ncvssample + rna_dna + (1|cohort/nc_subject_group), REML = F, data = summarized_df2_frac_stats[summarized_df2_frac_stats$variable == "dsDNA", ]))
+summary(lmer(value_log_trnsfrmd ~ ncvssample + rna_dna + (1|cohort/nc_subject_group), REML = F, data = summarized_df2_frac_stats[summarized_df2_frac_stats$variable == "ssDNA", ]))
 
 summary(lmer(value_log_trnsfrmd ~ ncvssample + (1|cohort/nc_subject_group), REML = F, data = summarized_df2_frac_stats[summarized_df2_frac_stats$cohort %in% c("maqsood", "shah", "garmaeva") & summarized_df2_frac_stats$variable == "ssDNA", ]))
 
+p.adjust(c(0.01502, 0.555, 5.06e-05), method="BH")
 
-summary(lmer(value_log_trnsfrmd ~ ncvssample + (1|nc_subject_group), REML = F, data = summarized_df2_frac_stats[summarized_df2_frac_stats$cohort == "liang" & summarized_df2_frac_stats$variable == "RNA", ]))
-summary(lmer(value_log_trnsfrmd ~ ncvssample + (1|nc_subject_group), REML = F, data = summarized_df2_frac_stats[summarized_df2_frac_stats$cohort == "liang" & summarized_df2_frac_stats$variable == "dsDNA", ]))
-summary(lmer(value_log_trnsfrmd ~ ncvssample + (1|nc_subject_group), REML = F, data = summarized_df2_frac_stats[summarized_df2_frac_stats$cohort == "liang" & summarized_df2_frac_stats$variable == "ssDNA", ]))
+summary(lmer(value_log_trnsfrmd ~ ncvssample + rna_dna + (1|nc_subject_group), REML = F, data = summarized_df2_frac_stats[summarized_df2_frac_stats$cohort == "liang" & summarized_df2_frac_stats$variable == "RNA", ]))
+summary(lmer(value_log_trnsfrmd ~ ncvssample + rna_dna + (1|nc_subject_group), REML = F, data = summarized_df2_frac_stats[summarized_df2_frac_stats$cohort == "liang" & summarized_df2_frac_stats$variable == "dsDNA", ]))
+summary(lmer(value_log_trnsfrmd ~ ncvssample + rna_dna + (1|nc_subject_group), REML = F, data = summarized_df2_frac_stats[summarized_df2_frac_stats$cohort == "liang" & summarized_df2_frac_stats$variable == "ssDNA", ]))
 
-summary(lmer(value_log_trnsfrmd ~ ncvssample + (1|nc_subject_group), REML = F, data = summarized_df2_frac_stats[summarized_df2_frac_stats$cohort == "maqsood" & summarized_df2_frac_stats$variable == "dsDNA", ]))
-summary(lmer(value_log_trnsfrmd ~ ncvssample + (1|nc_subject_group), REML = F, data = summarized_df2_frac_stats[summarized_df2_frac_stats$cohort == "maqsood" & summarized_df2_frac_stats$variable == "ssDNA", ]))
+summary(lm(value_log_trnsfrmd ~ ncvssample, REML = F, data = summarized_df2_frac_stats[summarized_df2_frac_stats$cohort == "maqsood" & summarized_df2_frac_stats$variable == "dsDNA", ]))
+summary(lm(value_log_trnsfrmd ~ ncvssample, REML = F, data = summarized_df2_frac_stats[summarized_df2_frac_stats$cohort == "maqsood" & summarized_df2_frac_stats$variable == "ssDNA", ]))
 
-summary(lmer(value_log_trnsfrmd ~ ncvssample + (1|nc_subject_group), REML = F, data = summarized_df2_frac_stats[summarized_df2_frac_stats$cohort == "shah" & summarized_df2_frac_stats$variable == "RNA", ]))
-summary(lmer(value_log_trnsfrmd ~ ncvssample + (1|nc_subject_group), REML = F, data = summarized_df2_frac_stats[summarized_df2_frac_stats$cohort == "shah" & summarized_df2_frac_stats$variable == "dsDNA", ]))
-summary(lmer(value_log_trnsfrmd ~ ncvssample + (1|nc_subject_group), REML = F, data = summarized_df2_frac_stats[summarized_df2_frac_stats$cohort == "shah" & summarized_df2_frac_stats$variable == "ssDNA", ]))
+summary(lm(value_log_trnsfrmd ~ ncvssample, REML = F, data = summarized_df2_frac_stats[summarized_df2_frac_stats$cohort == "shah" & summarized_df2_frac_stats$variable == "RNA", ]))
+summary(lm(value_log_trnsfrmd ~ ncvssample, REML = F, data = summarized_df2_frac_stats[summarized_df2_frac_stats$cohort == "shah" & summarized_df2_frac_stats$variable == "dsDNA", ]))
+summary(lm(value_log_trnsfrmd ~ ncvssample, REML = F, data = summarized_df2_frac_stats[summarized_df2_frac_stats$cohort == "shah" & summarized_df2_frac_stats$variable == "ssDNA", ]))
 
-p.adjust(c(0.39, 0.0696, 0.0046, 0.4735, 0.569, 2.85e-06, 0.41734, 0.8717), method="BH")
+p.adjust(c(1, 0.309, 0.00519, 0.26, 0.572, 2.95e-06, 0.0292, 0.661), method="BH")
 
 summarized_df2_frac_stats$variable <- as.factor(summarized_df2_frac_stats$variable)
 summarized_df2_frac_stats$variable <- factor(summarized_df2_frac_stats$variable, levels = c("RNA", "ssDNA", "dsDNA", "Unclassified"))
@@ -320,29 +325,29 @@ summarized_df3 <- summarized_df3[rowSums(summarized_df3) > 0, ]
 summarized_df3_frac <- as.data.frame(t(apply(summarized_df3, 1, fraction_per_sample)))
 
 summarized_df3_frac$Sample_name <- row.names(summarized_df3_frac)
-summarized_df3_frac <- merge(summarized_df3_frac, meta_working[, colnames(meta_working) %in% c("Sample_name", "ncvssample", "cohort", "nc_subject_group")], all.x = T, by="Sample_name")
+summarized_df3_frac <- merge(summarized_df3_frac, meta_working[, colnames(meta_working) %in% c("Sample_name", "ncvssample", "cohort", "nc_subject_group", "rna_dna")], all.x = T, by="Sample_name")
 summarized_df3_frac$Sample_name <- NULL
 
-summarized_df3_frac_stats <- melt(summarized_df3_frac, id.vars = c("ncvssample", "cohort", "nc_subject_group"))
+summarized_df3_frac_stats <- melt(summarized_df3_frac, id.vars = c("ncvssample", "cohort", "nc_subject_group", "rna_dna"))
 
 summarized_df3_frac_stats$ncvssample <- factor(summarized_df3_frac_stats$ncvssample, levels = c("SAMPLES", "NCs"))
 
 summarized_df3_frac_stats$value_log_trnsfrmd <- summarized_df3_frac_stats$value + (min(summarized_df3_frac_stats$value[summarized_df3_frac_stats$value > 0])/2)
 summarized_df3_frac_stats$value_log_trnsfrmd <- log(summarized_df3_frac_stats$value_log_trnsfrmd)
 
-summary(lmer(value_log_trnsfrmd ~ ncvssample + (1|cohort/nc_subject_group), REML = F, data = summarized_df3_frac_stats[summarized_df3_frac_stats$variable == "Eukaryotes", ]))
-summary(lmer(value_log_trnsfrmd ~ ncvssample + (1|cohort/nc_subject_group), REML = F, data = summarized_df3_frac_stats[summarized_df3_frac_stats$variable == "Prokaryotes", ]))
-p.adjust(c(0.061, 0.177), method="BH")
+summary(lmer(value_log_trnsfrmd ~ ncvssample + rna_dna + (1|cohort/nc_subject_group), REML = F, data = summarized_df3_frac_stats[summarized_df3_frac_stats$variable == "Eukaryotes", ]))
+summary(lmer(value_log_trnsfrmd ~ ncvssample + rna_dna + (1|cohort/nc_subject_group), REML = F, data = summarized_df3_frac_stats[summarized_df3_frac_stats$variable == "Prokaryotes", ]))
+p.adjust(c(0.08229, 0.454), method="BH")
 
-summary(lmer(value_log_trnsfrmd ~ ncvssample + (1|nc_subject_group), REML = F, data = summarized_df3_frac_stats[summarized_df3_frac_stats$cohort == "liang" & summarized_df3_frac_stats$variable == "Eukaryotes", ]))
-summary(lmer(value_log_trnsfrmd ~ ncvssample + (1|nc_subject_group), REML = F, data = summarized_df3_frac_stats[summarized_df3_frac_stats$cohort == "liang" & summarized_df3_frac_stats$variable == "Prokaryotes", ]))
+summary(lmer(value_log_trnsfrmd ~ ncvssample + rna_dna + (1|nc_subject_group), REML = F, data = summarized_df3_frac_stats[summarized_df3_frac_stats$cohort == "liang" & summarized_df3_frac_stats$variable == "Eukaryotes", ]))
+summary(lmer(value_log_trnsfrmd ~ ncvssample + rna_dna + (1|nc_subject_group), REML = F, data = summarized_df3_frac_stats[summarized_df3_frac_stats$cohort == "liang" & summarized_df3_frac_stats$variable == "Prokaryotes", ]))
 
-summary(lmer(value_log_trnsfrmd ~ ncvssample + (1|nc_subject_group), REML = F, data = summarized_df3_frac_stats[summarized_df3_frac_stats$cohort == "maqsood" & summarized_df3_frac_stats$variable == "Eukaryotes", ]))
-summary(lmer(value_log_trnsfrmd ~ ncvssample + (1|nc_subject_group), REML = F, data = summarized_df3_frac_stats[summarized_df3_frac_stats$cohort == "maqsood" & summarized_df3_frac_stats$variable == "Prokaryotes", ]))
+summary(lm(value_log_trnsfrmd ~ ncvssample, REML = F, data = summarized_df3_frac_stats[summarized_df3_frac_stats$cohort == "maqsood" & summarized_df3_frac_stats$variable == "Eukaryotes", ]))
+summary(lm(value_log_trnsfrmd ~ ncvssample, REML = F, data = summarized_df3_frac_stats[summarized_df3_frac_stats$cohort == "maqsood" & summarized_df3_frac_stats$variable == "Prokaryotes", ]))
 
-summary(lmer(value_log_trnsfrmd ~ ncvssample + (1|nc_subject_group), REML = F, data = summarized_df3_frac_stats[summarized_df3_frac_stats$cohort == "shah" & summarized_df3_frac_stats$variable == "Eukaryotes", ]))
-summary(lmer(value_log_trnsfrmd ~ ncvssample + (1|nc_subject_group), REML = F, data = summarized_df3_frac_stats[summarized_df3_frac_stats$cohort == "shah" & summarized_df3_frac_stats$variable == "Prokaryotes", ]))
-p.adjust(c(0.093, 0.413, 0.229289, 0.443, 0.507, 3.04e-06), method="BH")
+summary(lm(value_log_trnsfrmd ~ ncvssample, REML = F, data = summarized_df3_frac_stats[summarized_df3_frac_stats$cohort == "shah" & summarized_df3_frac_stats$variable == "Eukaryotes", ]))
+summary(lm(value_log_trnsfrmd ~ ncvssample, REML = F, data = summarized_df3_frac_stats[summarized_df3_frac_stats$cohort == "shah" & summarized_df3_frac_stats$variable == "Prokaryotes", ]))
+p.adjust(c(0.126981, 0.890, 0.0328, 0.157, 0.084, 3.14e-06), method="BH")
 
 # Answering if prokaryotes dominating eukaryotes
 
@@ -751,46 +756,48 @@ meta_all_with_qc_curated$ncvssample <- factor(meta_all_with_qc_curated$ncvssampl
 
 ## Stats calculation for part 1
 #######################################################################################################################################
-summary(lmer(clean_reads_comb ~  ncvssample + (1|cohort/nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$clean_reads_comb > 0, ]))
-summary(lmer(clean_reads_comb ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$clean_reads_comb > 0 & 
+invrank = function(x) {qnorm((rank(x,na.last = "keep") - 0.5) / sum(!is.na(x)))}
+
+summary(lmer(invrank(clean_reads_comb) ~  ncvssample + rna_dna + (1|cohort/nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$clean_reads_comb > 0, ]))
+summary(lmer(invrank(clean_reads_comb) ~  ncvssample + rna_dna + (1|nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$clean_reads_comb > 0 & 
                                                                                                                 meta_all_with_qc_curated$cohort == "liang", ]))
-summary(lmer(clean_reads_comb ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$cohort == "maqsood", ]))
-summary(lmer(clean_reads_comb ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$cohort == "shah", ]))
-p.adjust(c(0.75, 0.0383, 0.725), method="BH")
+summary(lmer(invrank(clean_reads_comb) ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$cohort == "maqsood", ]))
+summary(lmer(invrank(clean_reads_comb) ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$cohort == "shah", ]))
+p.adjust(c(0.752, 0.0483, 0.671), method="BH")
 
-summary(lmer(contigs_1000 ~ ncvssample + (1|cohort/nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$clean_reads_comb > 0, ]))
-summary(lmer(contigs_1000 ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$clean_reads_comb > 0 & 
+summary(lmer(invrank(contigs_1000) ~ ncvssample + rna_dna + (1|cohort/nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$clean_reads_comb > 0, ]))
+summary(lmer(invrank(contigs_1000) ~  ncvssample + rna_dna + (1|nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$clean_reads_comb > 0 & 
                                                                                                             meta_all_with_qc_curated$cohort == "liang", ]))
-summary(lmer(contigs_1000 ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$cohort == "maqsood", ]))
-summary(lmer(contigs_1000 ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$cohort == "shah", ]))
-p.adjust(c(0.0321, 0.802, 0.360), method="BH")
+summary(lmer(invrank(contigs_1000) ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$cohort == "maqsood", ]))
+summary(lmer(invrank(contigs_1000) ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$cohort == "shah", ]))
+p.adjust(c(0.09, 0.113, 0.00247), method="BH")
 
-summary(lmer(total_viruses_discovered ~ ncvssample + (1|cohort/nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$clean_reads_comb > 0, ]))
-summary(lmer(total_viruses_discovered ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$clean_reads_comb > 0 & 
+summary(lmer(invrank(total_viruses_discovered) ~ ncvssample + rna_dna + (1|cohort/nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$clean_reads_comb > 0, ]))
+summary(lmer(invrank(total_viruses_discovered) ~  ncvssample + rna_dna + (1|nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$clean_reads_comb > 0 & 
                                                                                                                         meta_all_with_qc_curated$cohort == "liang", ]))
-summary(lmer(total_viruses_discovered ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$cohort == "maqsood", ]))
-summary(lmer(total_viruses_discovered ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$cohort == "shah", ]))
-p.adjust(c(0.000231, 0.645, 0.368), method="BH")
+summary(lmer(invrank(total_viruses_discovered) ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$cohort == "maqsood", ]))
+summary(lmer(invrank(total_viruses_discovered) ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$cohort == "shah", ]))
+p.adjust(c(0.013, 0.0231, 0.014), method="BH")
 
-summary(lmer(CHM_LU_richness_discovered_ratio ~ ncvssample + (1|cohort/nc_subject_group), REML = F, data = meta_working))
-summary(lmer(CHM_LU_richness_discovered_ratio ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_working[meta_working$cohort == "liang", ]))
-summary(lmer(CHM_LU_richness_discovered_ratio ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_working[meta_working$cohort == "maqsood", ]))
-summary(lmer(CHM_LU_richness_discovered_ratio ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_working[meta_working$cohort == "shah", ]))
-p.adjust(c(0.0742, 0.020469, 0.8654), method="BH")
+summary(lmer(invrank(CHM_LU_richness_discovered_ratio) ~ ncvssample + rna_dna + (1|cohort/nc_subject_group), REML = F, data = meta_working))
+summary(lmer(invrank(CHM_LU_richness_discovered_ratio) ~  ncvssample + rna_dna + (1|nc_subject_group), REML = F, data = meta_working[meta_working$cohort == "liang", ]))
+summary(lmer(invrank(CHM_LU_richness_discovered_ratio) ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_working[meta_working$cohort == "maqsood", ]))
+summary(lmer(invrank(CHM_LU_richness_discovered_ratio) ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_working[meta_working$cohort == "shah", ]))
+p.adjust(c(0.002411, 0.758, 0.334), method="BH")
 
-summary(lmer(richness ~ ncvssample + (1|cohort/nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$clean_reads_comb > 0, ]))
-summary(lmer(richness ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$clean_reads_comb > 0 & 
+summary(lmer(invrank(richness) ~ ncvssample + rna_dna + (1|cohort/nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$clean_reads_comb > 0, ]))
+summary(lmer(invrank(richness) ~  ncvssample + rna_dna + (1|nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$clean_reads_comb > 0 & 
                                                                                                         meta_all_with_qc_curated$cohort == "liang", ]))
-summary(lmer(richness ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_working[meta_working$cohort == "maqsood", ]))
-summary(lmer(richness ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_working[meta_working$cohort == "shah", ]))
-p.adjust(c(6.53e-05, 0.540, 0.000603), method="BH")
+summary(lmer(invrank(richness) ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_working[meta_working$cohort == "maqsood", ]))
+summary(lmer(invrank(richness) ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_working[meta_working$cohort == "shah", ]))
+p.adjust(c(0.000167, 0.0115, 0.0172), method="BH")
 
-summary(lmer(diversity ~ ncvssample + (1|cohort/nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$clean_reads_comb > 0, ]))
-summary(lmer(diversity ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$clean_reads_comb > 0 & 
+summary(lmer(invrank(diversity) ~ ncvssample + rna_dna + (1|cohort/nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$clean_reads_comb > 0, ]))
+summary(lmer(invrank(diversity) ~ ncvssample + rna_dna + (1|nc_subject_group), REML = F, data = meta_all_with_qc_curated[meta_all_with_qc_curated$clean_reads_comb > 0 & 
                                                                                                          meta_all_with_qc_curated$cohort == "liang", ]))
-summary(lmer(diversity ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_working[meta_working$cohort == "maqsood", ]))
-summary(lmer(diversity ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_working[meta_working$cohort == "shah", ]))
-p.adjust(c(2.79e-06, 0.0696, 0.00723), method="BH")
+summary(lmer(invrank(diversity) ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_working[meta_working$cohort == "maqsood", ]))
+summary(lmer(invrank(diversity) ~  ncvssample + (1|nc_subject_group), REML = F, data = meta_working[meta_working$cohort == "shah", ]))
+p.adjust(c(0.000382, 0.0451, 0.00909), method="BH")
 
 calculate_mean_ci <- function(data_vector, confidence_level = 0.95) {
   data_vector <- na.omit(data_vector)
